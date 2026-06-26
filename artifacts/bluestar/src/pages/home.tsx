@@ -1,11 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { ShieldCheck, Globe2, Briefcase, Award } from "lucide-react";
+import { ShieldCheck, Globe2, Briefcase, Award, CheckCircle2, Star } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import { useEffect } from "react";
 import hero1 from "@/assets/hero-1.png";
 import hero2 from "@/assets/hero-2.png";
 import hero3 from "@/assets/hero-3.png";
+import img1 from "@assets/WhatsApp_Image_2026-06-26_at_6.21.31_PM_(1)_1782495714036.jpeg";
+import img2 from "@assets/WhatsApp_Image_2026-06-26_at_6.21.45_PM_1782495714036.jpeg";
+import img3 from "@assets/WhatsApp_Image_2026-06-26_at_6.21.46_PM_1782495687081.jpeg";
+import img4 from "@assets/WhatsApp_Image_2026-06-26_at_6.21.48_PM_1782495687081.jpeg";
+import img5 from "@assets/WhatsApp_Image_2026-06-26_at_6.21.59_PM_1782495668018.jpeg";
+import img6 from "@assets/WhatsApp_Image_2026-06-26_at_6.31.20_PM_(1)_1782495668017.jpeg";
+import img7 from "@assets/WhatsApp_Image_2026-06-26_at_6.31.21_PM_(1)_1782495626564.jpeg";
+import img8 from "@assets/WhatsApp_Image_2026-06-26_at_6.31.25_PM_1782495610349.jpeg";
 
 const slides = [
   {
@@ -26,9 +34,11 @@ const slides = [
 ];
 
 const industries = [
-  "Mining", "Construction", "Electrical", "Maritime", "Oil & Gas", 
+  "Mining", "Construction", "Electrical", "Maritime", "Oil & Gas",
   "Heavy Machinery", "Hospitality", "Retail", "Marketing", "Education"
 ];
+
+const photoGallery = [img1, img2, img3, img4, img5, img6, img7, img8];
 
 export default function Home() {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
@@ -49,9 +59,9 @@ export default function Home() {
         <div className="flex h-full w-full">
           {slides.map((slide, index) => (
             <div key={index} className="relative flex-[0_0_100%] h-full min-w-0">
-              <img 
-                src={slide.image} 
-                alt={slide.title} 
+              <img
+                src={slide.image}
+                alt={slide.title}
                 className="absolute inset-0 w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-black/60 z-10" />
@@ -91,8 +101,8 @@ export default function Home() {
             </div>
             <div className="flex flex-col items-center p-4">
               <Briefcase className="w-12 h-12 text-primary mb-4" />
-              <h3 className="font-serif text-3xl font-bold text-primary mb-2">10k+</h3>
-              <p className="text-muted-foreground font-medium uppercase tracking-wider text-sm">Global Placements</p>
+              <h3 className="font-serif text-3xl font-bold text-primary mb-2">4,000+</h3>
+              <p className="text-muted-foreground font-medium uppercase tracking-wider text-sm">Active Job Openings</p>
             </div>
             <div className="flex flex-col items-center p-4">
               <Globe2 className="w-12 h-12 text-primary mb-4" />
@@ -101,8 +111,146 @@ export default function Home() {
             </div>
             <div className="flex flex-col items-center p-4">
               <Award className="w-12 h-12 text-primary mb-4" />
-              <h3 className="font-serif text-3xl font-bold text-primary mb-2">100%</h3>
-              <p className="text-muted-foreground font-medium uppercase tracking-wider text-sm">Client Satisfaction</p>
+              <h3 className="font-serif text-3xl font-bold text-primary mb-2">74+</h3>
+              <p className="text-muted-foreground font-medium uppercase tracking-wider text-sm">Deferred Option Users</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Candidate Support Banner */}
+      <section className="py-16 bg-primary text-white">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-primary-foreground/70 uppercase tracking-widest text-sm font-medium mb-4">WE PROVIDE THE FOLLOWING</p>
+          <h2 className="font-serif text-4xl md:text-5xl font-bold mb-10">Candidates Support Program</h2>
+          <div className="flex flex-wrap justify-center gap-6 md:gap-12 mb-10">
+            {[
+              { label: "Visa Sponsorship", icon: "✅" },
+              { label: "Flight Ticket", icon: "✅" },
+              { label: "Work Permit", icon: "✅" },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center gap-3 bg-white/10 px-6 py-4 rounded-sm">
+                <span className="text-2xl">{item.icon}</span>
+                <span className="font-semibold text-lg tracking-wide">{item.label}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-primary-foreground/80 text-lg max-w-2xl mx-auto mb-8">
+            Apply with us today. <strong>Skilled and experienced only.</strong>
+          </p>
+          <Link href="/apply">
+            <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 text-lg px-10 h-14">
+              Start Your Application
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      {/* Hiring Now Section */}
+      <section className="py-24">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <p className="text-accent font-semibold uppercase tracking-widest text-sm mb-4">🚨 Hiring Now</p>
+              <h2 className="font-serif text-4xl md:text-5xl font-bold text-primary mb-6">The Opportunity Is Real If You're Ready</h2>
+              <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
+                Welcome to the next step with Bluestar Alliance Company Limited. Your skills stood out and we're looking for people who take ownership and deliver. Because we believe we grow by hiring people who are better than yesterday.
+              </p>
+              <p className="text-muted-foreground text-lg mb-8 leading-relaxed">
+                Come ready to show us how you think, work, and win. Whether you join us now or later, keep building your edge. This is your chance to build something meaningful with us — let's make it count.
+              </p>
+              <div className="space-y-3 mb-8">
+                {["Construction & Skilled Trades", "Healthcare & Nursing", "Oil & Gas Engineering", "Maritime & Offshore", "Hospitality & Management"].map(role => (
+                  <div key={role} className="flex items-center gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+                    <span className="font-medium text-foreground">{role}</span>
+                  </div>
+                ))}
+              </div>
+              <Link href="/jobs">
+                <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 h-14">
+                  View All Openings
+                </Button>
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {[img1, img2, img3, img4].map((img, i) => (
+                <div key={i} className="relative h-52 rounded-sm overflow-hidden shadow-lg">
+                  <img src={img} alt="Team at work" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Flexible Deferred Option */}
+      <section className="py-24 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12">
+              <p className="text-accent font-semibold uppercase tracking-widest text-sm mb-4">Candidate Support Program</p>
+              <h2 className="font-serif text-4xl md:text-5xl font-bold text-primary mb-6">Flexible Deferred Option Available</h2>
+              <p className="text-muted-foreground text-lg">
+                Candidates Support for your Immigration & Employment Documents
+              </p>
+            </div>
+
+            <div className="bg-white rounded-sm shadow-lg border border-border p-8 md:p-12">
+              <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
+                We understand that obtaining all required employment and immigration documents can be difficult, time-consuming, and financially burdensome. To prevent these challenges from delaying your employment with us, we strongly recommend our <strong>FLEXIBLE DEFERRED OPTION</strong>.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                {[
+                  {
+                    title: "Premium Processing",
+                    desc: "All documents processed on priority basis and completed within 15 BUSINESS DAYS.",
+                    icon: "⚡"
+                  },
+                  {
+                    title: "Reduced Financial Burden",
+                    desc: "Pay only an initial administrative amount. The company covers the rest with a 12-month installment plan.",
+                    icon: "💰"
+                  },
+                  {
+                    title: "Full Transparency",
+                    desc: "All immigration documents issued directly in your name through official, verifiable channels.",
+                    icon: "🔒"
+                  },
+                  {
+                    title: "Dedicated HR Support",
+                    desc: "Our HR team guides you personally through every step of the immigration and employment process.",
+                    icon: "🤝"
+                  }
+                ].map(item => (
+                  <div key={item.title} className="flex gap-4">
+                    <span className="text-3xl flex-shrink-0">{item.icon}</span>
+                    <div>
+                      <h4 className="font-bold text-primary mb-1">{item.title}</h4>
+                      <p className="text-muted-foreground text-sm leading-relaxed">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-primary/5 border border-primary/20 rounded-sm p-6 mb-8">
+                <div className="flex items-center gap-3 mb-2">
+                  <Star className="w-6 h-6 text-accent" />
+                  <h4 className="font-bold text-primary text-lg">74+ Applicants Already Enrolled</h4>
+                </div>
+                <p className="text-muted-foreground">
+                  Over 74 applicants have already chosen the Flexible Deferred Option and are progressing confidently toward their start dates with us.
+                </p>
+              </div>
+
+              <div className="border-t border-border pt-6">
+                <p className="text-muted-foreground mb-2">To apply or ask questions, contact our HR team:</p>
+                <p className="font-semibold text-primary">bluestaralliancecompanyltd@gmail.com</p>
+                <p className="text-sm text-muted-foreground mt-4 italic">
+                  — Sharon Healey MacKinnon, Human Resources Department, Bluestar Alliance Company Limited
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -118,7 +266,7 @@ export default function Home() {
                 Since our founding, Bluestar Alliance Company Limited has been the quiet force behind some of the world's most monumental industrial achievements. We provide the exceptional talent that powers global progress.
               </p>
               <p className="text-muted-foreground text-lg mb-8 leading-relaxed">
-                Whether you're stepping onto an offshore rig, managing a multinational retail operation, or engineering the infrastructure of tomorrow, we are your trusted partner in career advancement.
+                To meet the demand for construction and skilled trade workers globally, we're modernizing our workforce programs — focused on industry-driven training that turns job seekers into experts building an amazing future.
               </p>
               <Link href="/about">
                 <Button variant="outline" size="lg" className="border-primary text-primary hover:bg-primary/5">
@@ -128,13 +276,31 @@ export default function Home() {
             </div>
             <div className="relative h-[500px] rounded-sm overflow-hidden shadow-2xl">
               <div className="absolute inset-0 bg-primary/10 mix-blend-multiply z-10" />
-              <img src={hero3} alt="Corporate Team" className="w-full h-full object-cover" />
+              <img src={img5} alt="Corporate Team" className="w-full h-full object-cover" />
               <div className="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur p-6 rounded-sm shadow-lg z-20 border-l-4 border-accent">
                 <p className="font-serif italic text-primary text-lg">
                   "Excellence is not an act, but a habit cultivated over decades of unwavering commitment to our professionals and clients."
                 </p>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Photo Gallery */}
+      <section className="py-16 bg-secondary/20">
+        <div className="container mx-auto px-4">
+          <h2 className="font-serif text-3xl font-bold text-primary text-center mb-10">Our Work Around the World</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {photoGallery.map((img, i) => (
+              <div key={i} className="relative h-48 md:h-64 rounded-sm overflow-hidden shadow-md group">
+                <img
+                  src={img}
+                  alt={`Bluestar Alliance work ${i + 1}`}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -148,7 +314,7 @@ export default function Home() {
               Specialized recruitment across critical global sectors. Our expertise ensures you're matched with opportunities that demand your caliber.
             </p>
           </div>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-8">
             {industries.map((ind, i) => (
               <div key={i} className="bg-primary-foreground/5 border border-primary-foreground/10 p-6 flex items-center justify-center text-center rounded-sm hover:bg-primary-foreground/10 transition-colors">

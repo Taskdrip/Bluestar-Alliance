@@ -1,0 +1,1 @@
+- [Bluestar project setup](bluestar-setup.md) — pnpm monorepo, React/Vite frontend, Express API port 8080, Drizzle/PostgreSQL, codegen after OpenAPI changes.

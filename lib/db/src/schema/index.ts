@@ -2,3 +2,7 @@ export * from "./users";
 export * from "./jobs";
 export * from "./applications";
 export * from "./testimonials";
+export * from "./messages";
+export * from "./notifications";
+export * from "./payment_settings";
+export * from "./addon_orders";

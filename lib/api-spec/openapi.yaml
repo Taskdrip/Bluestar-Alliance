@@ -21,6 +21,12 @@ tags:
     description: Admin operations
   - name: stats
     description: Statistics and summaries
+  - name: messages
+    description: Chat messages
+  - name: notifications
+    description: Notifications
+  - name: addons
+    description: Add-on orders
 
 paths:
   /healthz:
@@ -163,6 +169,293 @@ paths:
                 $ref: "#/components/schemas/Application"
         "404":
           description: Not found
+
+  /admin/jobs:
+    post:
+      operationId: createJob
+      tags: [admin]
+      summary: Admin - Create a new job listing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobInput"
+      responses:
+        "201":
+          description: Job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "401":
+          description: Unauthorized
+
+  /admin/jobs/{id}:
+    patch:
+      operationId: updateJob
+      tags: [admin]
+      summary: Admin - Update a job listing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobInput"
+      responses:
+        "200":
+          description: Updated job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteJob
+      tags: [admin]
+      summary: Admin - Delete a job listing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required: [success]
+        "404":
+          description: Not found
+
+  /admin/payment-settings:
+    get:
+      operationId: getPaymentSettings
+      tags: [admin]
+      summary: Admin - Get payment settings
+      responses:
+        "200":
+          description: Payment settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentSettings"
+        "404":
+          description: Not configured yet
+    put:
+      operationId: updatePaymentSettings
+      tags: [admin]
+      summary: Admin - Update payment settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentSettingsInput"
+      responses:
+        "200":
+          description: Updated payment settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentSettings"
+
+  /admin/addon-orders:
+    get:
+      operationId: listAddonOrders
+      tags: [admin]
+      summary: Admin - List all add-on orders
+      responses:
+        "200":
+          description: List of add-on orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AddonOrder"
+
+  /admin/addon-orders/{id}/status:
+    patch:
+      operationId: updateAddonOrderStatus
+      tags: [admin]
+      summary: Admin - Update addon order status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+      responses:
+        "200":
+          description: Updated addon order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddonOrder"
+
+  /addon-orders:
+    post:
+      operationId: createAddonOrder
+      tags: [addons]
+      summary: Create an add-on order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddonOrderInput"
+      responses:
+        "201":
+          description: Add-on order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddonOrder"
+
+  /messages/{applicationId}:
+    get:
+      operationId: getMessages
+      tags: [messages]
+      summary: Get messages for an application
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: email
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+    post:
+      operationId: sendMessage
+      tags: [messages]
+      summary: Send a message in an application thread
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageInput"
+      responses:
+        "201":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+  /notifications:
+    get:
+      operationId: getNotifications
+      tags: [notifications]
+      summary: Get notifications for the current user
+      parameters:
+        - name: email
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: role
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/{id}/read:
+    patch:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark a notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Notification marked read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+
+  /notifications/read-all:
+    patch:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read for a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+      responses:
+        "200":
+          description: All marked read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required: [success]
 
   /testimonials:
     get:
@@ -315,6 +608,30 @@ components:
         createdAt:
           type: string
 
+    JobInput:
+      type: object
+      required: [title, location, category, experienceLevel, description]
+      properties:
+        title:
+          type: string
+          minLength: 2
+        location:
+          type: string
+          minLength: 2
+        category:
+          type: string
+          minLength: 2
+        experienceLevel:
+          type: string
+          minLength: 2
+        description:
+          type: string
+          minLength: 10
+        salaryRange:
+          type: string
+        isUrgent:
+          type: boolean
+
     ApplicationInput:
       type: object
       required: [fullName, email, phone, country, position, yearsOfExperience]
@@ -370,6 +687,153 @@ components:
       required: [status]
       properties:
         status:
+          type: string
+
+    Message:
+      type: object
+      required: [id, applicationId, senderRole, senderName, content, isRead, createdAt]
+      properties:
+        id:
+          type: integer
+        applicationId:
+          type: integer
+        senderRole:
+          type: string
+        senderName:
+          type: string
+        content:
+          type: string
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+
+    MessageInput:
+      type: object
+      required: [senderRole, senderName, content]
+      properties:
+        senderRole:
+          type: string
+        senderName:
+          type: string
+        content:
+          type: string
+          minLength: 1
+        email:
+          type: string
+
+    Notification:
+      type: object
+      required: [id, recipientEmail, recipientRole, message, type, isRead, createdAt]
+      properties:
+        id:
+          type: integer
+        recipientEmail:
+          type: string
+        recipientRole:
+          type: string
+        message:
+          type: string
+        type:
+          type: string
+        relatedId:
+          type: ["integer", "null"]
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+
+    PaymentSettings:
+      type: object
+      required: [id, bankName, accountName, accountNumber, updatedAt]
+      properties:
+        id:
+          type: integer
+        bankName:
+          type: string
+        accountName:
+          type: string
+        accountNumber:
+          type: string
+        routingNumber:
+          type: ["string", "null"]
+        swiftCode:
+          type: ["string", "null"]
+        additionalInfo:
+          type: ["string", "null"]
+        updatedAt:
+          type: string
+
+    PaymentSettingsInput:
+      type: object
+      required: [bankName, accountName, accountNumber]
+      properties:
+        bankName:
+          type: string
+          minLength: 2
+        accountName:
+          type: string
+          minLength: 2
+        accountNumber:
+          type: string
+          minLength: 4
+        routingNumber:
+          type: string
+        swiftCode:
+          type: string
+        additionalInfo:
+          type: string
+
+    AddonOrder:
+      type: object
+      required: [id, applicationId, applicantEmail, applicantName, visaSponsorship, flightTicket, workPermit, totalAmount, paymentMethod, status, createdAt]
+      properties:
+        id:
+          type: integer
+        applicationId:
+          type: integer
+        applicantEmail:
+          type: string
+        applicantName:
+          type: string
+        visaSponsorship:
+          type: boolean
+        flightTicket:
+          type: boolean
+        workPermit:
+          type: boolean
+        totalAmount:
+          type: integer
+        paymentMethod:
+          type: string
+        status:
+          type: string
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    AddonOrderInput:
+      type: object
+      required: [applicationId, applicantEmail, applicantName, visaSponsorship, flightTicket, workPermit, totalAmount]
+      properties:
+        applicationId:
+          type: integer
+        applicantEmail:
+          type: string
+        applicantName:
+          type: string
+        visaSponsorship:
+          type: boolean
+        flightTicket:
+          type: boolean
+        workPermit:
+          type: boolean
+        totalAmount:
+          type: integer
+        paymentMethod:
+          type: string
+        notes:
           type: string
 
     Testimonial:

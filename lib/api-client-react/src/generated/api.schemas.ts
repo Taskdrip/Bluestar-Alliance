@@ -22,6 +22,21 @@ export interface Job {
   createdAt: string;
 }
 
+export interface JobInput {
+  /** @minLength 2 */
+  title: string;
+  /** @minLength 2 */
+  location: string;
+  /** @minLength 2 */
+  category: string;
+  /** @minLength 2 */
+  experienceLevel: string;
+  /** @minLength 10 */
+  description: string;
+  salaryRange?: string;
+  isUrgent?: boolean;
+}
+
 export interface ApplicationInput {
   /** @minLength 2 */
   fullName: string;
@@ -54,6 +69,90 @@ export interface Application {
 
 export interface ApplicationStatusUpdate {
   status: string;
+}
+
+export interface Message {
+  id: number;
+  applicationId: number;
+  senderRole: string;
+  senderName: string;
+  content: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface MessageInput {
+  senderRole: string;
+  senderName: string;
+  /** @minLength 1 */
+  content: string;
+  email?: string;
+}
+
+export interface Notification {
+  id: number;
+  recipientEmail: string;
+  recipientRole: string;
+  message: string;
+  type: string;
+  /** @nullable */
+  relatedId?: number | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface PaymentSettings {
+  id: number;
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  /** @nullable */
+  routingNumber?: string | null;
+  /** @nullable */
+  swiftCode?: string | null;
+  /** @nullable */
+  additionalInfo?: string | null;
+  updatedAt: string;
+}
+
+export interface PaymentSettingsInput {
+  /** @minLength 2 */
+  bankName: string;
+  /** @minLength 2 */
+  accountName: string;
+  /** @minLength 4 */
+  accountNumber: string;
+  routingNumber?: string;
+  swiftCode?: string;
+  additionalInfo?: string;
+}
+
+export interface AddonOrder {
+  id: number;
+  applicationId: number;
+  applicantEmail: string;
+  applicantName: string;
+  visaSponsorship: boolean;
+  flightTicket: boolean;
+  workPermit: boolean;
+  totalAmount: number;
+  paymentMethod: string;
+  status: string;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface AddonOrderInput {
+  applicationId: number;
+  applicantEmail: string;
+  applicantName: string;
+  visaSponsorship: boolean;
+  flightTicket: boolean;
+  workPermit: boolean;
+  totalAmount: number;
+  paymentMethod?: string;
+  notes?: string;
 }
 
 export interface Testimonial {
@@ -112,6 +211,31 @@ urgent?: boolean;
 export type ListApplicationsParams = {
 role?: string;
 status?: string;
+};
+
+export type DeleteJob200 = {
+  success: boolean;
+};
+
+export type UpdateAddonOrderStatusBody = {
+  status: string;
+};
+
+export type GetMessagesParams = {
+email?: string;
+};
+
+export type GetNotificationsParams = {
+email?: string;
+role?: string;
+};
+
+export type MarkAllNotificationsReadBody = {
+  email: string;
+};
+
+export type MarkAllNotificationsRead200 = {
+  success: boolean;
 };
 
 export type LogoutUser200 = {

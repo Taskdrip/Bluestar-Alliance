@@ -145,6 +145,326 @@ export const UpdateApplicationStatusResponse = zod.object({
 
 
 /**
+ * @summary Admin - Create a new job listing
+ */
+export const createJobBodyTitleMin = 2;
+
+export const createJobBodyLocationMin = 2;
+
+export const createJobBodyCategoryMin = 2;
+
+export const createJobBodyExperienceLevelMin = 2;
+
+export const createJobBodyDescriptionMin = 10;
+
+
+
+export const CreateJobBody = zod.object({
+  "title": zod.string().min(createJobBodyTitleMin),
+  "location": zod.string().min(createJobBodyLocationMin),
+  "category": zod.string().min(createJobBodyCategoryMin),
+  "experienceLevel": zod.string().min(createJobBodyExperienceLevelMin),
+  "description": zod.string().min(createJobBodyDescriptionMin),
+  "salaryRange": zod.string().optional(),
+  "isUrgent": zod.boolean().optional()
+})
+
+export const CreateJobResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "location": zod.string(),
+  "category": zod.string(),
+  "experienceLevel": zod.string(),
+  "description": zod.string(),
+  "salaryRange": zod.string().nullish(),
+  "isUrgent": zod.boolean(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Admin - Update a job listing
+ */
+export const UpdateJobParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateJobBodyTitleMin = 2;
+
+export const updateJobBodyLocationMin = 2;
+
+export const updateJobBodyCategoryMin = 2;
+
+export const updateJobBodyExperienceLevelMin = 2;
+
+export const updateJobBodyDescriptionMin = 10;
+
+
+
+export const UpdateJobBody = zod.object({
+  "title": zod.string().min(updateJobBodyTitleMin),
+  "location": zod.string().min(updateJobBodyLocationMin),
+  "category": zod.string().min(updateJobBodyCategoryMin),
+  "experienceLevel": zod.string().min(updateJobBodyExperienceLevelMin),
+  "description": zod.string().min(updateJobBodyDescriptionMin),
+  "salaryRange": zod.string().optional(),
+  "isUrgent": zod.boolean().optional()
+})
+
+export const UpdateJobResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "location": zod.string(),
+  "category": zod.string(),
+  "experienceLevel": zod.string(),
+  "description": zod.string(),
+  "salaryRange": zod.string().nullish(),
+  "isUrgent": zod.boolean(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Admin - Delete a job listing
+ */
+export const DeleteJobParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteJobResponse = zod.object({
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary Admin - Get payment settings
+ */
+export const GetPaymentSettingsResponse = zod.object({
+  "id": zod.number(),
+  "bankName": zod.string(),
+  "accountName": zod.string(),
+  "accountNumber": zod.string(),
+  "routingNumber": zod.string().nullish(),
+  "swiftCode": zod.string().nullish(),
+  "additionalInfo": zod.string().nullish(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Admin - Update payment settings
+ */
+export const updatePaymentSettingsBodyBankNameMin = 2;
+
+export const updatePaymentSettingsBodyAccountNameMin = 2;
+
+export const updatePaymentSettingsBodyAccountNumberMin = 4;
+
+
+
+export const UpdatePaymentSettingsBody = zod.object({
+  "bankName": zod.string().min(updatePaymentSettingsBodyBankNameMin),
+  "accountName": zod.string().min(updatePaymentSettingsBodyAccountNameMin),
+  "accountNumber": zod.string().min(updatePaymentSettingsBodyAccountNumberMin),
+  "routingNumber": zod.string().optional(),
+  "swiftCode": zod.string().optional(),
+  "additionalInfo": zod.string().optional()
+})
+
+export const UpdatePaymentSettingsResponse = zod.object({
+  "id": zod.number(),
+  "bankName": zod.string(),
+  "accountName": zod.string(),
+  "accountNumber": zod.string(),
+  "routingNumber": zod.string().nullish(),
+  "swiftCode": zod.string().nullish(),
+  "additionalInfo": zod.string().nullish(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Admin - List all add-on orders
+ */
+export const ListAddonOrdersResponseItem = zod.object({
+  "id": zod.number(),
+  "applicationId": zod.number(),
+  "applicantEmail": zod.string(),
+  "applicantName": zod.string(),
+  "visaSponsorship": zod.boolean(),
+  "flightTicket": zod.boolean(),
+  "workPermit": zod.boolean(),
+  "totalAmount": zod.number(),
+  "paymentMethod": zod.string(),
+  "status": zod.string(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListAddonOrdersResponse = zod.array(ListAddonOrdersResponseItem)
+
+
+/**
+ * @summary Admin - Update addon order status
+ */
+export const UpdateAddonOrderStatusParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateAddonOrderStatusBody = zod.object({
+  "status": zod.string()
+})
+
+export const UpdateAddonOrderStatusResponse = zod.object({
+  "id": zod.number(),
+  "applicationId": zod.number(),
+  "applicantEmail": zod.string(),
+  "applicantName": zod.string(),
+  "visaSponsorship": zod.boolean(),
+  "flightTicket": zod.boolean(),
+  "workPermit": zod.boolean(),
+  "totalAmount": zod.number(),
+  "paymentMethod": zod.string(),
+  "status": zod.string(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Create an add-on order
+ */
+export const CreateAddonOrderBody = zod.object({
+  "applicationId": zod.number(),
+  "applicantEmail": zod.string(),
+  "applicantName": zod.string(),
+  "visaSponsorship": zod.boolean(),
+  "flightTicket": zod.boolean(),
+  "workPermit": zod.boolean(),
+  "totalAmount": zod.number(),
+  "paymentMethod": zod.string().optional(),
+  "notes": zod.string().optional()
+})
+
+export const CreateAddonOrderResponse = zod.object({
+  "id": zod.number(),
+  "applicationId": zod.number(),
+  "applicantEmail": zod.string(),
+  "applicantName": zod.string(),
+  "visaSponsorship": zod.boolean(),
+  "flightTicket": zod.boolean(),
+  "workPermit": zod.boolean(),
+  "totalAmount": zod.number(),
+  "paymentMethod": zod.string(),
+  "status": zod.string(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Get messages for an application
+ */
+export const GetMessagesParams = zod.object({
+  "applicationId": zod.coerce.number()
+})
+
+export const GetMessagesQueryParams = zod.object({
+  "email": zod.coerce.string().optional()
+})
+
+export const GetMessagesResponseItem = zod.object({
+  "id": zod.number(),
+  "applicationId": zod.number(),
+  "senderRole": zod.string(),
+  "senderName": zod.string(),
+  "content": zod.string(),
+  "isRead": zod.boolean(),
+  "createdAt": zod.string()
+})
+export const GetMessagesResponse = zod.array(GetMessagesResponseItem)
+
+
+/**
+ * @summary Send a message in an application thread
+ */
+export const SendMessageParams = zod.object({
+  "applicationId": zod.coerce.number()
+})
+
+
+
+
+export const SendMessageBody = zod.object({
+  "senderRole": zod.string(),
+  "senderName": zod.string(),
+  "content": zod.string().min(1),
+  "email": zod.string().optional()
+})
+
+export const SendMessageResponse = zod.object({
+  "id": zod.number(),
+  "applicationId": zod.number(),
+  "senderRole": zod.string(),
+  "senderName": zod.string(),
+  "content": zod.string(),
+  "isRead": zod.boolean(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Get notifications for the current user
+ */
+export const GetNotificationsQueryParams = zod.object({
+  "email": zod.coerce.string().optional(),
+  "role": zod.coerce.string().optional()
+})
+
+export const GetNotificationsResponseItem = zod.object({
+  "id": zod.number(),
+  "recipientEmail": zod.string(),
+  "recipientRole": zod.string(),
+  "message": zod.string(),
+  "type": zod.string(),
+  "relatedId": zod.number().nullish(),
+  "isRead": zod.boolean(),
+  "createdAt": zod.string()
+})
+export const GetNotificationsResponse = zod.array(GetNotificationsResponseItem)
+
+
+/**
+ * @summary Mark a notification as read
+ */
+export const MarkNotificationReadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const MarkNotificationReadResponse = zod.object({
+  "id": zod.number(),
+  "recipientEmail": zod.string(),
+  "recipientRole": zod.string(),
+  "message": zod.string(),
+  "type": zod.string(),
+  "relatedId": zod.number().nullish(),
+  "isRead": zod.boolean(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Mark all notifications as read for a user
+ */
+export const MarkAllNotificationsReadBody = zod.object({
+  "email": zod.string()
+})
+
+export const MarkAllNotificationsReadResponse = zod.object({
+  "success": zod.boolean()
+})
+
+
+/**
  * @summary List testimonials
  */
 export const ListTestimonialsResponseItem = zod.object({
