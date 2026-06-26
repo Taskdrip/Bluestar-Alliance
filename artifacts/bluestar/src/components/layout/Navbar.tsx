@@ -24,11 +24,13 @@ export default function Navbar() {
 
   useEffect(() => {
     if (!user) return;
-    const email = user.role === "admin" ? "admin" : user.email;
-    const role = user.role;
+    const token = localStorage.getItem("bluestar_token");
+    if (!token) return;
     const fetchNotifs = () => {
-      fetch(`/api/notifications?email=${encodeURIComponent(email)}&role=${role}`)
-        .then(r => r.json())
+      fetch(`/api/notifications`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(r => r.ok ? r.json() : [])
         .then((data: any[]) => {
           setNotifs(data.slice(-20).reverse());
           setUnreadCount(data.filter(n => !n.isRead).length);
@@ -42,11 +44,12 @@ export default function Navbar() {
 
   const handleMarkAllRead = () => {
     if (!user) return;
-    const email = user.role === "admin" ? "admin" : user.email;
+    const token = localStorage.getItem("bluestar_token");
+    if (!token) return;
     fetch("/api/notifications/read-all", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({}),
     }).then(() => {
       setNotifs(prev => prev.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
@@ -55,9 +58,10 @@ export default function Navbar() {
 
   const handleLogout = () => {
     logout.mutate(undefined, {
-      onSuccess: () => {
+      onSettled: () => {
         localStorage.removeItem("bluestar_token");
-        queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+        queryClient.setQueryData(getGetCurrentUserQueryKey(), null);
+        queryClient.removeQueries({ queryKey: getGetCurrentUserQueryKey() });
         setLocation("/");
       }
     });

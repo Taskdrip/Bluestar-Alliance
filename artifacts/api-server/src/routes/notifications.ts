@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, notificationsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import { verifyToken } from "../lib/auth";
 
 const router = Router();
 
@@ -17,53 +18,116 @@ function serializeNotification(n: any) {
   };
 }
 
+/** Extract and verify the Bearer token from Authorization header. */
+function getTokenPayload(req: any) {
+  const authHeader = req.headers.authorization as string | undefined;
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  return verifyToken(authHeader.slice(7));
+}
+
 router.get("/", async (req, res) => {
-  const { email, role } = req.query as { email?: string; role?: string };
-
-  let notifications = await db
-    .select()
-    .from(notificationsTable)
-    .orderBy(notificationsTable.createdAt);
-
-  if (email) {
-    notifications = notifications.filter(n => n.recipientEmail === email);
+  const payload = getTokenPayload(req);
+  if (!payload) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
   }
-  if (role) {
-    notifications = notifications.filter(n => n.recipientRole === role);
+
+  // Admins see all notifications filtered by role=admin; users see their own.
+  let notifications;
+  if (payload.role === "admin") {
+    notifications = await db
+      .select()
+      .from(notificationsTable)
+      .orderBy(notificationsTable.createdAt);
+    notifications = notifications.filter((n) => n.recipientRole === "admin");
+  } else {
+    // Fetch user email from DB to avoid trusting client-supplied value
+    const { usersTable } = await import("@workspace/db");
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, payload.userId));
+    if (!user) {
+      res.status(401).json({ error: "User not found" });
+      return;
+    }
+    notifications = await db
+      .select()
+      .from(notificationsTable)
+      .orderBy(notificationsTable.createdAt);
+    notifications = notifications.filter(
+      (n) => n.recipientEmail === user.email && n.recipientRole === "user"
+    );
   }
 
   res.json(notifications.map(serializeNotification));
 });
 
 router.patch("/read-all", async (req, res) => {
-  const { email } = req.body;
-  if (!email) {
-    res.status(400).json({ error: "email is required" });
+  const payload = getTokenPayload(req);
+  if (!payload) {
+    res.status(401).json({ error: "Unauthorized" });
     return;
   }
 
-  const notifications = await db
-    .select()
-    .from(notificationsTable)
-    .where(eq(notificationsTable.recipientEmail, email));
-
-  for (const n of notifications) {
-    if (!n.isRead) {
-      await db
-        .update(notificationsTable)
-        .set({ isRead: true })
-        .where(eq(notificationsTable.id, n.id));
+  let emailToMark: string;
+  if (payload.role === "admin") {
+    emailToMark = "admin";
+  } else {
+    const { usersTable } = await import("@workspace/db");
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, payload.userId));
+    if (!user) {
+      res.status(401).json({ error: "User not found" });
+      return;
     }
+    emailToMark = user.email;
   }
+
+  await db
+    .update(notificationsTable)
+    .set({ isRead: true })
+    .where(eq(notificationsTable.recipientEmail, emailToMark));
 
   res.json({ success: true });
 });
 
 router.patch("/:id/read", async (req, res) => {
+  const payload = getTokenPayload(req);
+  if (!payload) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid ID" });
     return;
+  }
+
+  // Verify the notification belongs to this user before marking read
+  const [existing] = await db
+    .select()
+    .from(notificationsTable)
+    .where(eq(notificationsTable.id, id));
+
+  if (!existing) {
+    res.status(404).json({ error: "Notification not found" });
+    return;
+  }
+
+  if (payload.role !== "admin") {
+    const { usersTable } = await import("@workspace/db");
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, payload.userId));
+    if (!user || existing.recipientEmail !== user.email) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
   }
 
   const [updated] = await db
@@ -71,11 +135,6 @@ router.patch("/:id/read", async (req, res) => {
     .set({ isRead: true })
     .where(eq(notificationsTable.id, id))
     .returning();
-
-  if (!updated) {
-    res.status(404).json({ error: "Notification not found" });
-    return;
-  }
 
   res.json(serializeNotification(updated));
 });

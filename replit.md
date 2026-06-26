@@ -1,36 +1,51 @@
-# [Project name]
+# Bluestar Alliance
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A professional global recruitment platform connecting skilled workers with industrial employers worldwide. Built for Bluestar Alliance — 18+ years in international staffing across mining, construction, oil & gas, maritime, and more.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/bluestar run dev` — run the frontend (port 22341, served at `/`)
+- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080, served at `/api`)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required env: `DATABASE_URL` — Postgres connection string, `SESSION_SECRET` — HMAC secret for tokens
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
+- Frontend: React + Vite + Tailwind CSS v4 + shadcn/ui + wouter
 - API: Express 5
 - DB: PostgreSQL + Drizzle ORM
+- Auth: Custom HMAC token (Bearer in Authorization header, stored in localStorage as `bluestar_token`)
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/bluestar/src/pages/` — all page components (home, jobs, apply, testimonials, about, contact, login, register, admin)
+- `artifacts/bluestar/src/components/layout/` — Navbar and Footer
+- `artifacts/bluestar/src/index.css` — Tailwind theme (navy primary, gold accent)
+- `artifacts/api-server/src/routes/` — Express route handlers
+- `artifacts/api-server/src/lib/auth.ts` — token creation/verification
+- `lib/api-spec/openapi.yaml` — OpenAPI spec (source of truth)
+- `lib/db/src/schema/` — Drizzle schema definitions
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Token-based auth: HMAC-signed Bearer tokens stored in localStorage; no cookies/sessions
+- Notifications are now auth-gated: GET/PATCH endpoints require Authorization header; identity derived server-side from token
+- Logout uses `onSettled` (not `onSuccess`) to ensure localStorage and query cache are cleared even if the API call fails
+- Color theme: deep navy (`224 76% 28%`) primary, gold/amber (`44 96% 52%`) accent — matches professional industrial recruitment branding
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- **Public**: Home with hero slider, Jobs listing with filters, Apply form, Testimonials, About, Contact
+- **Auth**: Register / Login pages, token stored in localStorage
+- **Applicant portal**: Track application status, receive messages and notifications
+- **Admin dashboard**: Manage jobs, review and update applications, payment settings, addon orders
 
 ## User preferences
 
@@ -38,7 +53,11 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Always run `pnpm --filter @workspace/api-spec run codegen` after editing `lib/api-spec/openapi.yaml`
+- After codegen, run `pnpm run typecheck:libs` before checking artifact packages
+- API server workflow is `artifacts/api-server: API Server`; frontend workflow is `artifacts/bluestar: web`
+- If port 8080 conflict occurs on restart, the old API server process may still be alive — kill it with `kill -9 <pid>` before restarting the managed workflow
+- Notifications fetch must include `Authorization: Bearer <token>` header — the server no longer accepts client-supplied email/role query params
 
 ## Pointers
 
