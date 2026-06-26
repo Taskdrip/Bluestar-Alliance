@@ -1,0 +1,256 @@
+Build a modern, professional, high-trust full-stack web application for a multinational corporation named: Add relevant images on different sections of the web app , and add a hero slider background images , make the white font very visible with the background images used on the hero slider on the header section
+
+BLUESTAR ALLIANCE COMPANY LIMITED
+
+🌐 COMPANY PROFILE (IMPORTANT – USE THROUGHOUT THE APP):
+Bluestar Alliance Company Limited is a privately owned multinational corporation with over 18 years of proven excellence in delivering world-class services and employment opportunities across multiple industries globally.
+
+For nearly two decades, Bluestar Alliance has built a strong reputation for operational excellence, workforce development, and international project execution, with thousands of successful placements and ongoing projects across continents.
+
+The company operates across:
+
+* Mining
+* Construction
+* Electrical Utility
+* Maritime (cargo, oil & passenger vessels)
+* Oil & Gas (including offshore rigs)
+* Heavy Machinery
+* Hospitality
+* Retail & Distribution
+* Marketing
+* Education & Training
+
+🌍 GLOBAL OPERATIONS:
+Bluestar Alliance has active operations, projects, and recruitment programs in:
+
+* Michigan, United States
+* Perth, Western Australia
+* Additional global partnerships across North America, Europe, Asia, and Australia
+
+🎯 GOAL:
+Create a high-conversion corporate recruitment web app that reflects:
+
+* Trust (18+ years experience)
+* Global presence
+* Professional excellence
+* Large-scale hiring capability
+
+The platform should encourage users to confidently apply for jobs.
+
+---
+
+## 🧱 TECH STACK:
+
+* Frontend: React + TailwindCSS (preferred) OR HTML/CSS/JS
+* Backend: Node.js + Express
+* Database: SQLite (or JSON for MVP)
+* Authentication: Email/password system
+
+---
+
+## 📄 PAGES TO BUILD:
+
+### 1. HOMEPAGE (HIGH AUTHORITY LANDING PAGE)
+
+Hero Section:
+
+* Headline:
+  “18+ Years of Building Global Careers & Industrial Excellence”
+* Subtext:
+  “Join a trusted multinational company delivering opportunities across industries worldwide.”
+* CTA Buttons:
+
+  * Apply Now
+  * View Job Openings
+
+Trust Indicators (VERY IMPORTANT):
+
+* “Serving globally for over 18 years”
+* “Thousands of successful job placements”
+* “Operations across multiple continents”
+* “Trusted by professionals worldwide”
+
+About Section:
+
+* Highlight legacy, experience, and global workforce impact
+
+Industries Section:
+
+* Display all sectors with icons
+
+Global Presence Section:
+
+* Mention USA, Australia, and global reach
+
+---
+
+### 2. JOB OPENINGS PAGE
+
+Add professional, realistic job listings:
+
+* Nurse
+* Civil Engineer
+* CNC Machinist
+* Oil Rig Engineer
+* Electrician
+* Mechanical Engineer
+* Ship Crew Member
+* Hospitality Manager
+* Retail Supervisor
+* Logistics Coordinator
+
+Each job includes:
+
+* Title
+* Location (USA / Australia / Global)
+* Experience level
+* Short description
+* Apply button
+
+Add banner:
+“Join Thousands of Professionals Already Working with Bluestar Alliance”
+
+---
+
+### 3. APPLICATION / REGISTRATION PAGE
+
+Professional recruitment form:
+
+Fields:
+
+* Full Name
+* Email
+* Phone Number
+* Country of Residence
+* Position Applying For (dropdown)
+* Years of Experience
+* Upload CV (mock)
+* Submit button
+
+After submission:
+Display message:
+“Your application has been successfully submitted. With over 18 years of recruitment excellence, our HR team carefully reviews every application and will contact shortlisted candidates.”
+
+---
+
+### 4. TESTIMONIALS PAGE (VERY IMPORTANT FOR TRUST)
+
+Create premium testimonial cards with:
+
+Profiles (must look professional in uniforms):
+
+* Nurse (hospital scrubs)
+* Civil Engineer (helmet & vest)
+* CNC Machinist (factory uniform)
+* Oil Rig Engineer (oil rig PPE)
+* Electrician
+* Maritime Crew Member
+* Hospitality Staff
+* Logistics Manager
+
+Each testimonial includes:
+
+* Name
+* Job role
+* Country
+* Testimonial
+
+Sample testimonials:
+
+“I secured a role as an Oil Rig Engineer in Australia through Bluestar Alliance. Their 18+ years of experience truly shows in their process.”
+
+“After applying, I was placed as a Nurse in the United States within weeks. Highly professional and reliable company.”
+
+---
+
+### 5. ABOUT PAGE
+
+Include:
+
+* Company history (18+ years journey)
+* Mission:
+  “To create global employment opportunities and deliver excellence across industries”
+* Vision:
+  “To remain a leading global workforce and industrial solutions provider”
+* Achievements:
+
+  * 18+ years experience
+  * Thousands of hires
+  * Multi-industry leadership
+  * Global partnerships
+
+---
+
+### 6. CONTACT PAGE
+
+Include:
+
+* Contact email (placeholder)
+* Phone (placeholder)
+* Office locations (USA & Australia)
+
+Add Facebook CTA:
+“Connect with us on Facebook”
+
+Link:
+https://www.facebook.com/share/1H4b18diUW/
+
+---
+
+## 🎨 DESIGN REQUIREMENTS:
+
+* Premium corporate design (VERY IMPORTANT)
+* Blue + White + subtle Gold accents (to reflect legacy & trust)
+* Clean typography
+* Smooth animations
+* Professional spacing
+* Trust badges and credibility sections
+
+---
+
+## 🔐 AUTH FEATURES:
+
+* User registration/login
+* Store applicants
+* Admin dashboard route:
+  /admin
+
+  * View applicants
+  * Filter by role
+
+---
+
+## 📦 EXTRA FEATURES:
+
+* Navigation bar:
+  Home | Jobs | Testimonials | About | Apply | Contact
+
+* Footer:
+
+  * “© Bluestar Alliance Company Limited – 18+ Years of Excellence”
+  * Quick links
+  * Facebook link
+
+---
+
+## 🧠 BONUS FEATURES:
+
+* Job filtering by category
+* Success notifications
+* Loading animations
+* Highlight “Urgent Hiring” roles
+
+---
+
+## 📁 OUTPUT:
+
+* Fully working MVP
+* Clean folder structure
+* Instructions:
+  npm install
+  npm start
+
+---
+
+IMPORTANT:
+The website must feel like a long-established, globally trusted company with over 18 years of experience. Every section should reinforce credibility, professionalism, and international scale.

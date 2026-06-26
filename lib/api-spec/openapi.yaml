@@ -1,22 +1,33 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Bluestar Alliance recruitment platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: jobs
+    description: Job listings
+  - name: applications
+    description: Job applications
+  - name: testimonials
+    description: Testimonials
+  - name: auth
+    description: Authentication
+  - name: admin
+    description: Admin operations
+  - name: stats
+    description: Statistics and summaries
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +35,254 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /jobs:
+    get:
+      operationId: listJobs
+      tags: [jobs]
+      summary: List all job openings
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: location
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: urgent
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Job"
+
+  /jobs/{id}:
+    get:
+      operationId: getJob
+      tags: [jobs]
+      summary: Get a single job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "404":
+          description: Not found
+
+  /applications:
+    post:
+      operationId: submitApplication
+      tags: [applications]
+      summary: Submit a job application
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationInput"
+      responses:
+        "201":
+          description: Application submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "400":
+          description: Validation error
+
+  /admin/applications:
+    get:
+      operationId: listApplications
+      tags: [admin]
+      summary: Admin - List all applications
+      parameters:
+        - name: role
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of applications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Application"
+        "401":
+          description: Unauthorized
+
+  /admin/applications/{id}/status:
+    patch:
+      operationId: updateApplicationStatus
+      tags: [admin]
+      summary: Update application status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationStatusUpdate"
+      responses:
+        "200":
+          description: Updated application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "404":
+          description: Not found
+
+  /testimonials:
+    get:
+      operationId: listTestimonials
+      tags: [testimonials]
+      summary: List testimonials
+      responses:
+        "200":
+          description: Testimonials
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Testimonial"
+
+  /auth/register:
+    post:
+      operationId: registerUser
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserRegistration"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+        "409":
+          description: Email already exists
+
+  /auth/login:
+    post:
+      operationId: loginUser
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserLogin"
+      responses:
+        "200":
+          description: Login success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      operationId: logoutUser
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required: [message]
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
+  /stats/summary:
+    get:
+      operationId: getStatsSummary
+      tags: [stats]
+      summary: Get site-wide statistics summary
+      responses:
+        "200":
+          description: Stats summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatsSummary"
+
+  /stats/applications-by-role:
+    get:
+      operationId: getApplicationsByRole
+      tags: [stats]
+      summary: Get application counts grouped by role (admin)
+      responses:
+        "200":
+          description: Applications by role
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoleCount"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +290,170 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    Job:
+      type: object
+      required: [id, title, location, category, experienceLevel, description, isUrgent, createdAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        location:
+          type: string
+        category:
+          type: string
+        experienceLevel:
+          type: string
+        description:
+          type: string
+        salaryRange:
+          type: ["string", "null"]
+        isUrgent:
+          type: boolean
+        createdAt:
+          type: string
+
+    ApplicationInput:
+      type: object
+      required: [fullName, email, phone, country, position, yearsOfExperience]
+      properties:
+        fullName:
+          type: string
+          minLength: 2
+        email:
+          type: string
+        phone:
+          type: string
+        country:
+          type: string
+        position:
+          type: string
+        yearsOfExperience:
+          type: integer
+          minimum: 0
+        coverLetter:
+          type: string
+        cvFileName:
+          type: ["string", "null"]
+
+    Application:
+      type: object
+      required: [id, fullName, email, phone, country, position, yearsOfExperience, status, submittedAt]
+      properties:
+        id:
+          type: integer
+        fullName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        country:
+          type: string
+        position:
+          type: string
+        yearsOfExperience:
+          type: integer
+        coverLetter:
+          type: ["string", "null"]
+        cvFileName:
+          type: ["string", "null"]
+        status:
+          type: string
+        submittedAt:
+          type: string
+
+    ApplicationStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    Testimonial:
+      type: object
+      required: [id, name, role, country, quote, avatarUrl]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        role:
+          type: string
+        country:
+          type: string
+        quote:
+          type: string
+        avatarUrl:
+          type: string
+
+    UserRegistration:
+      type: object
+      required: [email, password, fullName]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+          minLength: 6
+        fullName:
+          type: string
+
+    UserLogin:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [user, token]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+
+    User:
+      type: object
+      required: [id, email, fullName, role, createdAt]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        fullName:
+          type: string
+        role:
+          type: string
+        createdAt:
+          type: string
+
+    StatsSummary:
+      type: object
+      required: [totalApplications, totalJobs, urgentJobs, pendingApplications, approvedApplications]
+      properties:
+        totalApplications:
+          type: integer
+        totalJobs:
+          type: integer
+        urgentJobs:
+          type: integer
+        pendingApplications:
+          type: integer
+        approvedApplications:
+          type: integer
+
+    RoleCount:
+      type: object
+      required: [position, count]
+      properties:
+        position:
+          type: string
+        count:
+          type: integer

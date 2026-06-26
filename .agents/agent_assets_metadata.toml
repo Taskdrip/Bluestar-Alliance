@@ -1,0 +1,62 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "TKY5ms45UO0c05DmT0aMs"
+uri = "file://artifacts/bluestar/src/assets/hero-1.png"
+type = "image"
+title = "Global construction site"
+
+[[generated]]
+id = "TxhzB629NfXP1hq_CWb-7"
+uri = "file://artifacts/bluestar/src/assets/hero-2.png"
+type = "image"
+title = "Offshore oil rig panorama"
+
+[[generated]]
+id = "8P9PHWktHx33jY9hB_K9l"
+uri = "file://artifacts/bluestar/src/assets/hero-3.png"
+type = "image"
+title = "Professional workforce team"
+
+[[generated]]
+id = "rnK2m3xYRZEsiRKDhdObi"
+uri = "file://artifacts/bluestar/src/assets/about-hq.png"
+type = "image"
+title = "Corporate headquarters lobby"
+
+[[generated]]
+id = "ZZxne9jjaPEyO0EZyOPVd"
+uri = "file://artifacts/bluestar/src/assets/contact-office.png"
+type = "image"
+title = "Professional corporate reception"
+
+[[generated]]
+id = "iklrvmBJ8vS8EkezjYtOI"
+uri = "file://artifacts/bluestar/src/assets/avatars/nurse.png"
+type = "image"
+title = "Nurse in scrubs portrait"
+
+[[generated]]
+id = "bNxk-d4trKCWUhzjYIXTe"
+uri = "file://artifacts/bluestar/src/assets/avatars/engineer.png"
+type = "image"
+title = "Engineer with helmet portrait"
+
+[[generated]]
+id = "bddAJlAAHWSOg6-n8QbD_"
+uri = "file://artifacts/bluestar/src/assets/avatars/machinist.png"
+type = "image"
+title = "Machinist portrait"
+
+[[generated]]
+id = "QK3rB6sD0x3bfioQ3qOxn"
+uri = "file://artifacts/bluestar/src/assets/avatars/oil-rig.png"
+type = "image"
+title = "Oil rig worker portrait"
+
+[[generated]]
+id = "HJLdvDmRQBvpEKx5Ypoe0"
+uri = "file://artifacts/bluestar/src/assets/avatars/electrician.png"
+type = "image"
+title = "Electrician portrait"

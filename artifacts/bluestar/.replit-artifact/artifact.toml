@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Bluestar Alliance"
+version = "1.0.0"
+id = "artifacts/bluestar"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22341
+
+[services.development]
+run = "pnpm --filter @workspace/bluestar run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/bluestar", "run", "build" ]
+publicDir = "artifacts/bluestar/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22341"
+BASE_PATH = "/"
