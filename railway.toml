@@ -1,0 +1,18 @@
+# Railway deployment configuration for Bluestar Alliance
+# Single service: Express API + serves built React frontend
+#
+# Required environment variables to set in Railway:
+#   DATABASE_URL   — PostgreSQL connection string (add a Railway Postgres plugin)
+#   SESSION_SECRET — HMAC secret for auth tokens (any long random string)
+#   NODE_ENV       — set to "production"
+
+[build]
+builder = "nixpacks"
+buildCommand = "pnpm install --frozen-lockfile && BASE_PATH=/ pnpm --filter @workspace/bluestar run build && pnpm --filter @workspace/api-server run build"
+
+[deploy]
+startCommand = "NODE_ENV=production node --enable-source-maps artifacts/api-server/dist/index.mjs"
+healthcheckPath = "/api/healthz"
+healthcheckTimeout = 60
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

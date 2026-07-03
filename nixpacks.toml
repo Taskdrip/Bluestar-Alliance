@@ -1,0 +1,5 @@
+# Nixpacks configuration for Railway
+# Pins Node.js 24 to match the Replit development environment.
+
+[variables]
+NODE_VERSION = "24"

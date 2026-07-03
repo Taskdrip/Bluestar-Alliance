@@ -1,30 +1,37 @@
 ---
-name: Bluestar Alliance project setup
-description: Key architectural decisions and gotchas for the Bluestar Alliance recruitment platform
+name: Bluestar project setup
+description: pnpm monorepo, React/Vite frontend, Express API, Drizzle/PostgreSQL, Railway deployment config
 ---
 
 ## Stack
-- Frontend: React+Vite (artifacts/bluestar), API: Express (artifacts/api-server, port 8080)
-- DB: PostgreSQL + Drizzle ORM (lib/db), codegen: Orval (lib/api-spec/openapi.yaml)
+- pnpm workspace monorepo, Node.js 24, TypeScript 5.9
+- Frontend: `artifacts/bluestar` — React + Vite + Tailwind v4 + shadcn/ui + wouter, port 22341
+- API: `artifacts/api-server` — Express 5, port 8080, esbuild CJS bundle → `dist/index.mjs`
+- DB: PostgreSQL + Drizzle ORM (`lib/db`), schema-push workflow (no migrations)
+- Auth: HMAC Bearer tokens in localStorage (`bluestar_token`), codegen from `lib/api-spec/openapi.yaml`
 
-## Auth
-- Bearer tokens in localStorage key `bluestar_token`; `initAuth()` in main.tsx sets up setAuthTokenGetter
+## Replit dev workflows
+- API: `PORT=8080 pnpm --filter @workspace/api-server run dev` (workflow name: `artifacts/api-server: API Server`)
+- Frontend: `PORT=22341 BASE_PATH=/ pnpm --filter @workspace/bluestar run dev` (workflow name: `artifacts/bluestar: web`)
+- Managed artifact.toml workflows inject PORT/BASE_PATH; if configuring manually these must be in the command
 
-## Codegen gotcha
-- lib/api-zod/src/index.ts must only export from `./generated/api` (NOT `./generated/types`) — duplicate name conflict
-- After changing openapi.yaml: `pnpm --filter @workspace/api-spec run codegen`
+## vite.config.ts
+- PORT and BASE_PATH are now optional with defaults (5173 and "/") — they used to throw if missing, breaking `vite build` without env vars
+- BASE_PATH must be `/` for Railway builds; artifact.toml sets it automatically for Replit
 
-## DB tables (all pushed)
-- Original: users, jobs, applications, testimonials
-- Added: messages, notifications, payment_settings, addon_orders
+## Railway deployment
+- `railway.toml` — single service: Express serves built React static files + API
+- Build: `pnpm install --frozen-lockfile && BASE_PATH=/ pnpm --filter @workspace/bluestar run build && pnpm --filter @workspace/api-server run build`
+- Start: `NODE_ENV=production node --enable-source-maps artifacts/api-server/dist/index.mjs`
+- Static files served from `artifacts/bluestar/dist/public` (override with `STATIC_DIR` env var)
+- Required Railway env vars: `DATABASE_URL`, `SESSION_SECRET`, `NODE_ENV=production`
+- **Schema push not yet wired into Railway build** — must run `pnpm --filter @workspace/db run push` manually on first deploy (Task #3)
 
-## FormLabel gotcha
-- FormLabel uses useFormField() internally and throws if used outside FormField context
-- Use plain Label component instead for standalone labels outside form fields
+## Express 5 catch-all pattern
+- `app.get("*", ...)` is INVALID in Express 5 (path-to-regexp v8 rejects it)
+- Use `app.use(handler)` without a path as the SPA catch-all
+- API 404 handler (`app.use("/api", ...)`) must come BEFORE the SPA catch-all to prevent HTML leaking to API clients
 
-## Notification bell (Navbar)
-- Polls /api/notifications?email=&role= every 30s; shows unread count badge; mark-all-read via PATCH /api/notifications/read-all
-
-## Add-on orders
-- Visa sponsorship $500, Flight ticket $800, Work permit $600
-- Selected on /apply page, paid via bank transfer, tracked in addon_orders table
+## Codegen
+- Always run `pnpm --filter @workspace/api-spec run codegen` after editing `lib/api-spec/openapi.yaml`
+- Then `pnpm run typecheck:libs` before checking artifact packages
