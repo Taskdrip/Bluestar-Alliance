@@ -8,7 +8,7 @@
 
 [build]
 builder = "nixpacks"
-buildCommand = "pnpm install --frozen-lockfile && BASE_PATH=/ pnpm --filter @workspace/bluestar run build && pnpm --filter @workspace/api-server run build"
+buildCommand = "pnpm install --no-frozen-lockfile && BASE_PATH=/ pnpm --filter @workspace/bluestar run build && pnpm --filter @workspace/api-server run build"
 
 [deploy]
 startCommand = "NODE_ENV=production node --enable-source-maps artifacts/api-server/dist/index.mjs"
