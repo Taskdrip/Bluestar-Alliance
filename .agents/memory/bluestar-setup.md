@@ -35,3 +35,8 @@ description: pnpm monorepo, React/Vite frontend, Express API, Drizzle/PostgreSQL
 ## Codegen
 - Always run `pnpm --filter @workspace/api-spec run codegen` after editing `lib/api-spec/openapi.yaml`
 - Then `pnpm run typecheck:libs` before checking artifact packages
+
+## Replit preview requires port 5000
+- Replit webview only proxies port 5000 (external port 80). The repo's original workflow ran the frontend on port 22341, which made the preview unreachable (502) until the workflow's PORT was changed to 5000 via `configureWorkflow` (not by hand-editing `.replit`, which is blocked).
+- The Vite dev server needs an explicit `server.proxy` entry forwarding `/api` to `http://localhost:8080` — without it, relative `/api/...` fetches from the frontend hit Vite's own SPA fallback (returns `index.html`) instead of the Express API, causing confusing runtime errors like "X.filter is not a function" (X is actually an HTML string).
+- DB schema must be pushed after a fresh clone/migration (`pnpm --filter @workspace/db run push`) and seeded via `scripts/seed.ts` — run it with `node --input-type=module < scripts/seed.ts` from inside `lib/db/` (no root-level `tsx` binary is installed; `pg` only resolves from `lib/db`'s node_modules).
