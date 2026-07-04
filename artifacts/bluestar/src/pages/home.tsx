@@ -295,6 +295,58 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Testimonials Preview */}
+      <section className="py-24 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-14">
+            <span className="inline-block text-accent font-semibold tracking-widest uppercase text-sm mb-4">Real Stories</span>
+            <h2 className="font-serif text-4xl md:text-5xl font-bold text-primary mb-4">Success Stories From the Field</h2>
+            <div className="w-16 h-1 bg-accent mx-auto mb-6 rounded-full" />
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg leading-relaxed">
+              Thousands of professionals have trusted Bluestar Alliance to transform their careers. Here's what some of them say.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            {[
+              {
+                name: "James Mwangi", role: "Civil Engineer", country: "Kenya → Australia",
+                quote: "Bluestar placed me with a major infrastructure consortium in Perth within six weeks. Three years on, I'm a senior site engineer leading a $240 million bridge project. This agency genuinely changed my life.",
+              },
+              {
+                name: "Maria Santos", role: "Registered Nurse", country: "Philippines → UK",
+                quote: "Bluestar's healthcare division matched me with an NHS trust in Manchester. They arranged my NMC registration support and relocation. I'm now a charge nurse in the ICU earning four times my previous salary.",
+              },
+              {
+                name: "Roberto Delgado", role: "Offshore Drilling Supervisor", country: "Mexico → Norway",
+                quote: "Bluestar's oil and gas team knew exactly which operators were hiring, coached me on the interviews, and had me on a rig in the North Sea within four months. I couldn't be happier.",
+              },
+            ].map((t) => (
+              <div key={t.name} className="bg-card border border-border rounded-xl p-7 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
+                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-accent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex gap-0.5 mb-4">
+                  {[1,2,3,4,5].map(i => <Star key={i} className="w-4 h-4 fill-accent text-accent" />)}
+                </div>
+                <p className="text-foreground/75 italic leading-relaxed mb-6 text-sm">"{t.quote}"</p>
+                <div className="flex items-center gap-3 pt-4 border-t border-border">
+                  <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-bold text-sm">{t.name.charAt(0)}</span>
+                  </div>
+                  <div>
+                    <p className="font-serif font-bold text-primary text-sm">{t.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t.role} &bull; {t.country}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="text-center">
+            <Button asChild variant="outline" size="lg" className="border-primary text-primary hover:bg-primary/5 px-10">
+              <a href="/testimonials">Read All Success Stories</a>
+            </Button>
+          </div>
+        </div>
+      </section>
+
       {/* Photo Gallery */}
       <section className="py-16 bg-secondary/20">
         <div className="container mx-auto px-4">
