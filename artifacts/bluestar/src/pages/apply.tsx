@@ -12,7 +12,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { CheckCircle2, UploadCloud, CreditCard, Copy, AlertCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
 const applicationSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
@@ -202,18 +201,11 @@ export default function Apply() {
               </CardHeader>
               <CardContent className="pt-4">
                 {ADDONS.filter(a => selectedAddons[a.id as AddonId]).map(a => (
-                  <div key={a.id} className="flex justify-between items-center py-3 border-b border-border last:border-0">
-                    <div>
-                      <p className="font-semibold text-foreground">{a.label}</p>
-                      <p className="text-sm text-muted-foreground">{a.description}</p>
-                    </div>
-                    <span className="font-bold text-primary text-lg">${a.price}</span>
+                  <div key={a.id} className="py-3 border-b border-border last:border-0">
+                    <p className="font-semibold text-foreground">{a.label}</p>
+                    <p className="text-sm text-muted-foreground">{a.description}</p>
                   </div>
                 ))}
-                <div className="flex justify-between items-center pt-4 mt-2">
-                  <span className="font-bold text-lg text-foreground">Total</span>
-                  <span className="font-bold text-2xl text-primary">${totalAddonAmount}</span>
-                </div>
               </CardContent>
             </Card>
 
@@ -224,7 +216,7 @@ export default function Apply() {
                     <CreditCard className="w-5 h-5 text-primary" />
                     <CardTitle className="font-serif text-xl text-primary">Bank Transfer Details</CardTitle>
                   </div>
-                  <CardDescription>Transfer the exact amount to the account below. Use your full name as reference.</CardDescription>
+                  <CardDescription>Use your full name as reference. Our team will contact you with the exact amount and any further instructions.</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6 space-y-4">
                   {[
@@ -233,7 +225,6 @@ export default function Apply() {
                     { label: "Account Number", value: paymentSettings.accountNumber },
                     paymentSettings.routingNumber && { label: "Routing Number", value: paymentSettings.routingNumber },
                     paymentSettings.swiftCode && { label: "SWIFT / BIC Code", value: paymentSettings.swiftCode },
-                    { label: "Amount", value: `$${totalAddonAmount} USD` },
                     submittedData && { label: "Reference", value: submittedData.fullName },
                   ].filter(Boolean).map((item: any) => (
                     <div key={item.label} className="flex items-center justify-between p-3 bg-muted/30 rounded-sm">
@@ -469,10 +460,7 @@ export default function Apply() {
                               onClick={e => e.stopPropagation()}
                             />
                             <div className="flex-1">
-                              <div className="flex items-center justify-between mb-1">
-                                <p className="font-semibold text-foreground">{addon.label}</p>
-                                <Badge variant="secondary" className="text-primary font-bold">${addon.price}</Badge>
-                              </div>
+                              <p className="font-semibold text-foreground mb-1">{addon.label}</p>
                               <p className="text-xs text-muted-foreground leading-relaxed">{addon.description}</p>
                             </div>
                           </div>
@@ -481,12 +469,9 @@ export default function Apply() {
                     })}
                   </div>
                   {hasAddons && (
-                    <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-sm flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-primary">Add-ons Total</p>
-                        <p className="text-sm text-muted-foreground">Payment via bank transfer after submission</p>
-                      </div>
-                      <span className="text-2xl font-bold text-primary">${totalAddonAmount}</span>
+                    <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-sm">
+                      <p className="font-semibold text-primary">Add-ons Selected</p>
+                      <p className="text-sm text-muted-foreground">Payment details will be arranged via bank transfer after submission</p>
                     </div>
                   )}
                 </div>

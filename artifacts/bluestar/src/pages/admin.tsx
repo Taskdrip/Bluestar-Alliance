@@ -120,13 +120,15 @@ export default function Admin() {
   const token = localStorage.getItem("bluestar_token");
 
   useEffect(() => {
-    if (user?.role === "admin") {
-      fetch("/api/notifications?email=admin&role=admin")
-        .then(r => r.json())
+    if (user?.role === "admin" && token) {
+      fetch("/api/notifications", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(r => r.ok ? r.json() : [])
         .then((notifs: any[]) => setUnreadNotifs(notifs.filter(n => !n.isRead).length))
         .catch(() => {});
     }
-  }, [user]);
+  }, [user, token]);
 
   useEffect(() => {
     if (activeTab === "payment" && user?.role === "admin") {
