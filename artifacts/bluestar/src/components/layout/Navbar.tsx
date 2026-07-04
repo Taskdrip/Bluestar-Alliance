@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, Bell, BellDot } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import logo from "@assets/24877df6-f2ec-4847-9055-916197331b0f_1783163476454.png";
 
 export default function Navbar() {
   const [location, setLocation] = useLocation();
@@ -79,12 +80,9 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
       <div className="container mx-auto px-4 md:px-8 h-20 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
-              <div className="w-3 h-3 bg-accent rotate-45 transform"></div>
-            </div>
-            <span className="font-serif font-bold text-xl md:text-2xl text-primary tracking-tight">Bluestar Alliance</span>
+        <div className="flex items-center">
+          <Link href="/">
+            <img src={logo} alt="Bluestar Alliance Company Limited" className="h-12 md:h-14 w-auto" />
           </Link>
         </div>
 

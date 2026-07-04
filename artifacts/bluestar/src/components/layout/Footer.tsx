@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { Facebook } from "lucide-react";
+import logo from "@assets/24877df6-f2ec-4847-9055-916197331b0f_1783163476454.png";
 
 export default function Footer() {
   return (
@@ -7,11 +8,10 @@ export default function Footer() {
       <div className="container mx-auto px-4 md:px-8 py-12 md:py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="md:col-span-2">
-            <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
-                <div className="w-3 h-3 bg-accent rotate-45 transform"></div>
+            <Link href="/" className="inline-block mb-4">
+              <div className="bg-white rounded-md px-3 py-2 inline-block">
+                <img src={logo} alt="Bluestar Alliance Company Limited" className="h-12 w-auto" />
               </div>
-              <span className="font-serif font-bold text-2xl tracking-tight text-white">Bluestar Alliance</span>
             </Link>
             <p className="text-primary-foreground/80 max-w-md mt-4 text-sm leading-relaxed">
               A premium multinational recruitment agency radiating over 18 years of proven trust, global scale, and professional excellence. The foundation for your global career.

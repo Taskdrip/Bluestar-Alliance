@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { ShieldCheck, Globe2, Briefcase, Award, CheckCircle2, Star } from "lucide-react";
+import { ShieldCheck, Globe2, Briefcase, Award, CheckCircle2, Star, HardHat, Building2, Zap, Anchor, Flame, Cog, UtensilsCrossed, ShoppingBag, TrendingUp, GraduationCap } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import { useEffect } from "react";
 import hero1 from "@/assets/hero-1.png";
@@ -34,8 +34,16 @@ const slides = [
 ];
 
 const industries = [
-  "Mining", "Construction", "Electrical", "Maritime", "Oil & Gas",
-  "Heavy Machinery", "Hospitality", "Retail", "Marketing", "Education"
+  { name: "Mining", icon: HardHat },
+  { name: "Construction", icon: Building2 },
+  { name: "Electrical", icon: Zap },
+  { name: "Maritime", icon: Anchor },
+  { name: "Oil & Gas", icon: Flame },
+  { name: "Heavy Machinery", icon: Cog },
+  { name: "Hospitality", icon: UtensilsCrossed },
+  { name: "Retail", icon: ShoppingBag },
+  { name: "Marketing", icon: TrendingUp },
+  { name: "Education", icon: GraduationCap },
 ];
 
 const photoGallery = [img1, img2, img3, img4, img5, img6, img7, img8];
@@ -306,21 +314,42 @@ export default function Home() {
       </section>
 
       {/* Industries Grid */}
-      <section className="py-24 bg-primary text-primary-foreground">
-        <div className="container mx-auto px-4">
+      <section className="relative py-28 overflow-hidden">
+        {/* Dark background image */}
+        <img
+          src={hero2}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover object-center scale-105"
+        />
+        {/* Deep gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/70 to-black/85" />
+
+        <div className="relative z-10 container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="font-serif text-4xl md:text-5xl font-bold mb-6 text-white">Industries We Serve</h2>
-            <p className="text-primary-foreground/80 max-w-2xl mx-auto text-lg">
+            <span className="inline-block text-accent font-semibold tracking-widest uppercase text-sm mb-4">What We Cover</span>
+            <h2 className="font-serif text-4xl md:text-5xl font-bold mb-6 text-white drop-shadow-lg">Industries We Serve</h2>
+            <div className="w-16 h-1 bg-accent mx-auto mb-6 rounded-full" />
+            <p className="text-white/75 max-w-2xl mx-auto text-lg leading-relaxed">
               Specialized recruitment across critical global sectors. Our expertise ensures you're matched with opportunities that demand your caliber.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-8">
-            {industries.map((ind, i) => (
-              <div key={i} className="bg-primary-foreground/5 border border-primary-foreground/10 p-6 flex items-center justify-center text-center rounded-sm hover:bg-primary-foreground/10 transition-colors">
-                <span className="font-medium text-white tracking-wide">{ind}</span>
-              </div>
-            ))}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-5">
+            {industries.map((ind, i) => {
+              const Icon = ind.icon;
+              return (
+                <div
+                  key={i}
+                  className="group flex flex-col items-center justify-center gap-3 p-6 rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm hover:bg-accent/20 hover:border-accent/50 transition-all duration-300 cursor-default"
+                >
+                  <div className="w-12 h-12 rounded-full bg-accent/15 border border-accent/30 flex items-center justify-center group-hover:bg-accent/30 group-hover:scale-110 transition-all duration-300">
+                    <Icon className="w-5 h-5 text-accent" />
+                  </div>
+                  <span className="font-semibold text-white text-sm tracking-wide text-center leading-snug">{ind.name}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
