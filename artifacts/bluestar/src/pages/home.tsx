@@ -6,6 +6,9 @@ import { useEffect } from "react";
 import hero1 from "@/assets/hero-1.png";
 import hero2 from "@/assets/hero-2.png";
 import hero3 from "@/assets/hero-3.png";
+import avatarJamesMwangi from "@/assets/avatars/james-mwangi.jpg";
+import avatarMariaSantos from "@/assets/avatars/maria-santos.jpg";
+import avatarRobertoDelgado from "@/assets/avatars/roberto-delgado.jpg";
 import img1 from "@assets/WhatsApp_Image_2026-06-26_at_6.21.31_PM_(1)_1782495714036.jpeg";
 import img2 from "@assets/WhatsApp_Image_2026-06-26_at_6.21.45_PM_1782495714036.jpeg";
 import img3 from "@assets/WhatsApp_Image_2026-06-26_at_6.21.46_PM_1782495687081.jpeg";
@@ -310,14 +313,17 @@ export default function Home() {
             {[
               {
                 name: "James Mwangi", role: "Civil Engineer", country: "Kenya → Australia",
+                avatar: avatarJamesMwangi,
                 quote: "Bluestar placed me with a major infrastructure consortium in Perth within six weeks. Three years on, I'm a senior site engineer leading a $240 million bridge project. This agency genuinely changed my life.",
               },
               {
                 name: "Maria Santos", role: "Registered Nurse", country: "Philippines → UK",
+                avatar: avatarMariaSantos,
                 quote: "Bluestar's healthcare division matched me with an NHS trust in Manchester. They arranged my NMC registration support and relocation. I'm now a charge nurse in the ICU earning four times my previous salary.",
               },
               {
                 name: "Roberto Delgado", role: "Offshore Drilling Supervisor", country: "Mexico → Norway",
+                avatar: avatarRobertoDelgado,
                 quote: "Bluestar's oil and gas team knew exactly which operators were hiring, coached me on the interviews, and had me on a rig in the North Sea within four months. I couldn't be happier.",
               },
             ].map((t) => (
@@ -328,9 +334,11 @@ export default function Home() {
                 </div>
                 <p className="text-foreground/75 italic leading-relaxed mb-6 text-sm">"{t.quote}"</p>
                 <div className="flex items-center gap-3 pt-4 border-t border-border">
-                  <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-bold text-sm">{t.name.charAt(0)}</span>
-                  </div>
+                  <img
+                    src={t.avatar}
+                    alt={t.name}
+                    className="w-11 h-11 rounded-full object-cover object-top flex-shrink-0 border-2 border-border"
+                  />
                   <div>
                     <p className="font-serif font-bold text-primary text-sm">{t.name}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{t.role} &bull; {t.country}</p>

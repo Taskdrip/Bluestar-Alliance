@@ -4,6 +4,35 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Quote, Star, Globe2, Users, Award, TrendingUp } from "lucide-react";
 
+// Local portrait imports — used by name key so seeded data gets real photos
+import imgJamesMwangi from "@/assets/avatars/james-mwangi.jpg";
+import imgMariaSantos from "@/assets/avatars/maria-santos.jpg";
+import imgAleksandrPetrenko from "@/assets/avatars/aleksandr-petrenko.jpg";
+import imgFatimaAlRashidi from "@/assets/avatars/fatima-al-rashidi.jpg";
+import imgKwekuAsante from "@/assets/avatars/kweku-asante.jpg";
+import imgNguyenThiLan from "@/assets/avatars/nguyen-thi-lan.jpg";
+import imgRobertoDelgado from "@/assets/avatars/roberto-delgado.jpg";
+import imgPriyaKrishnaswamy from "@/assets/avatars/priya-krishnaswamy.jpg";
+import imgThomasOseiBonsu from "@/assets/avatars/thomas-osei-bonsu.jpg";
+import imgElenaMarchetti from "@/assets/avatars/elena-marchetti.jpg";
+import imgSamuelChirwa from "@/assets/avatars/samuel-chirwa.jpg";
+import imgAikoTanaka from "@/assets/avatars/aiko-tanaka.jpg";
+
+const avatarMap: Record<string, string> = {
+  "James Mwangi": imgJamesMwangi,
+  "Maria Santos": imgMariaSantos,
+  "Aleksandr Petrenko": imgAleksandrPetrenko,
+  "Fatima Al-Rashidi": imgFatimaAlRashidi,
+  "Kweku Asante": imgKwekuAsante,
+  "Nguyen Thi Lan": imgNguyenThiLan,
+  "Roberto Delgado": imgRobertoDelgado,
+  "Priya Krishnaswamy": imgPriyaKrishnaswamy,
+  "Thomas Osei-Bonsu": imgThomasOseiBonsu,
+  "Elena Marchetti": imgElenaMarchetti,
+  "Samuel Chirwa": imgSamuelChirwa,
+  "Aiko Tanaka": imgAikoTanaka,
+};
+
 const stats = [
   { icon: Users, value: "4,000+", label: "Professionals Placed" },
   { icon: Globe2, value: "5", label: "Continents Served" },
@@ -79,9 +108,9 @@ export default function Testimonials() {
               </blockquote>
               <div className="flex items-center gap-5">
                 <img
-                  src={featured.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(featured.name)}&background=fff&color=1e3a8a&size=128`}
+                  src={avatarMap[featured.name] ?? featured.avatarUrl ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(featured.name)}&background=fff&color=1e3a8a&size=128`}
                   alt={featured.name}
-                  className="w-16 h-16 rounded-full border-2 border-accent object-cover"
+                  className="w-20 h-20 rounded-full border-2 border-accent object-cover object-top"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(featured.name)}&background=fff&color=1e3a8a&size=128`;
                   }}
@@ -133,9 +162,9 @@ export default function Testimonials() {
                   </p>
                   <div className="flex items-center gap-4 pt-4 border-t border-border">
                     <img
-                      src={t.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=1e3a8a&color=fff&size=128`}
+                      src={avatarMap[t.name] ?? t.avatarUrl ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=1e3a8a&color=fff&size=128`}
                       alt={t.name}
-                      className="w-12 h-12 rounded-full border-2 border-border object-cover flex-shrink-0"
+                      className="w-12 h-12 rounded-full border-2 border-border object-cover object-top flex-shrink-0"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=1e3a8a&color=fff&size=128`;
                       }}
