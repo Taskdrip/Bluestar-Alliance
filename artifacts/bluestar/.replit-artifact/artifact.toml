@@ -8,7 +8,7 @@ router = "path"
 [[services]]
 name = "web"
 paths = [ "/" ]
-localPort = 22341
+localPort = 5000
 
 [services.development]
 run = "pnpm --filter @workspace/bluestar run dev"
@@ -23,5 +23,5 @@ from = "/*"
 to = "/index.html"
 
 [services.env]
-PORT = "22341"
+PORT = "5000"
 BASE_PATH = "/"

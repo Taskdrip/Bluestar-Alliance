@@ -10,7 +10,12 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// Trim to guard against accidental leading/trailing whitespace when the
+// value is pasted into a secrets manager (pg's parser does not tolerate it,
+// unlike the WHATWG URL parser used elsewhere).
+const connectionString = process.env.DATABASE_URL.trim();
+
+export const pool = new Pool({ connectionString });
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";
