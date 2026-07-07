@@ -61,13 +61,19 @@ const offices = [
   {
     city: "Perth, Australia",
     role: "Asia-Pacific Operations",
-    address: "Level 12, St Georges Terrace, Perth WA 6000",
+    address: "Level 12, St Georges Terrace, Perth WA 6000, Australia",
     focus: "Mining, LNG, engineering — Australasia & Southeast Asia",
+  },
+  {
+    city: "Sydney, Australia",
+    role: "Australia East Coast Branch",
+    address: "Suite 18.01, 1 Market Street, Sydney NSW 2000, Australia",
+    focus: "Engineering, healthcare, logistics — East Australia & New Zealand",
   },
   {
     city: "Dubai, UAE",
     role: "Middle East Hub",
-    address: "Suite 801, Business Bay Tower, Dubai",
+    address: "Suite 801, Business Bay Tower, Dubai, UAE",
     focus: "Oil & gas, construction, hospitality — GCC & North Africa",
   },
 ];

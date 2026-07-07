@@ -26,6 +26,15 @@ const offices = [
     focus: "Mining, LNG, engineering — Australasia & Southeast Asia",
   },
   {
+    city: "Sydney, Australia",
+    badge: "Australia East Coast Branch",
+    address: "Suite 18.01, 1 Market Street\nSydney NSW 2000\nAustralia",
+    phone: "+61 (2) 8000 0000",
+    email: "sydney@bluestaralliance.com",
+    hours: "Mon – Fri: 8:00 am – 5:30 pm AEST",
+    focus: "Engineering, healthcare, logistics — East Australia & New Zealand",
+  },
+  {
     city: "Dubai, UAE",
     badge: "Middle East Hub",
     address: "Suite 801, Business Bay Tower\nDubai, UAE",

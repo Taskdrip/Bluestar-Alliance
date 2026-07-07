@@ -29,11 +29,11 @@ import { format } from "date-fns";
 import {
   AlertCircle, Briefcase, CheckCircle, Clock, FileText, Users,
   Plus, Pencil, Trash2, Send, MessageSquare, CreditCard, Settings,
-  Package, Eye, X
+  Package, Eye, X, Quote
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-type Tab = "overview" | "applications" | "jobs" | "chat" | "payment" | "orders";
+type Tab = "overview" | "applications" | "jobs" | "chat" | "payment" | "orders" | "testimonials";
 
 export default function Admin() {
   const [, setLocation] = useLocation();
@@ -71,6 +71,13 @@ export default function Admin() {
   // Add-on orders state
   const [orders, setOrders] = useState<any[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+
+  // Testimonials state
+  const [testimonialsList, setTestimonialsList] = useState<any[]>([]);
+  const [testimonialsLoading, setTestimonialsLoading] = useState(false);
+  const [testimonialModalOpen, setTestimonialModalOpen] = useState(false);
+  const [editingTestimonial, setEditingTestimonial] = useState<any>(null);
+  const [testimonialForm, setTestimonialForm] = useState({ name: "", role: "", country: "", quote: "", avatarUrl: "" });
 
   // Notification badge
   const [unreadNotifs, setUnreadNotifs] = useState(0);
@@ -158,6 +165,17 @@ export default function Admin() {
         .then(data => setOrders(data))
         .catch(() => {})
         .finally(() => setOrdersLoading(false));
+    }
+  }, [activeTab, user]);
+
+  useEffect(() => {
+    if (activeTab === "testimonials" && user?.role === "admin") {
+      setTestimonialsLoading(true);
+      fetch("/api/testimonials")
+        .then(r => r.json())
+        .then(data => setTestimonialsList(data))
+        .catch(() => {})
+        .finally(() => setTestimonialsLoading(false));
     }
   }, [activeTab, user]);
 
@@ -301,6 +319,44 @@ export default function Admin() {
     } catch (e) {}
   };
 
+  const handleOpenTestimonialModal = (t?: any) => {
+    if (t) {
+      setEditingTestimonial(t);
+      setTestimonialForm({ name: t.name, role: t.role, country: t.country, quote: t.quote, avatarUrl: t.avatarUrl });
+    } else {
+      setEditingTestimonial(null);
+      setTestimonialForm({ name: "", role: "", country: "", quote: "", avatarUrl: "" });
+    }
+    setTestimonialModalOpen(true);
+  };
+
+  const handleSaveTestimonial = async () => {
+    try {
+      const url = editingTestimonial ? `/api/testimonials/${editingTestimonial.id}` : "/api/testimonials";
+      const method = editingTestimonial ? "PATCH" : "POST";
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(testimonialForm),
+      });
+      const data = await res.json();
+      if (editingTestimonial) {
+        setTestimonialsList(prev => prev.map(t => t.id === data.id ? data : t));
+      } else {
+        setTestimonialsList(prev => [...prev, data]);
+      }
+      setTestimonialModalOpen(false);
+    } catch {}
+  };
+
+  const handleDeleteTestimonial = async (id: number) => {
+    if (!window.confirm("Delete this testimonial? This cannot be undone.")) return;
+    try {
+      await fetch(`/api/testimonials/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      setTestimonialsList(prev => prev.filter(t => t.id !== id));
+    } catch {}
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "approved": case "paid": return "bg-green-500";
@@ -313,6 +369,7 @@ export default function Admin() {
     { id: "overview", label: "Overview", icon: FileText },
     { id: "applications", label: "Applications", icon: Users },
     { id: "jobs", label: "Job Listings", icon: Briefcase },
+    { id: "testimonials", label: "Testimonials", icon: Quote },
     { id: "chat", label: "Chat", icon: MessageSquare },
     { id: "payment", label: "Payment Settings", icon: CreditCard },
     { id: "orders", label: "Add-on Orders", icon: Package },
@@ -755,6 +812,65 @@ export default function Admin() {
           </div>
         )}
 
+        {/* ── TESTIMONIALS ─────────────────────────────────────────── */}
+        {activeTab === "testimonials" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-serif text-2xl font-bold text-primary">Testimonials</h2>
+                <p className="text-muted-foreground text-sm mt-1">Manage success stories shown publicly on the website</p>
+              </div>
+              <Button onClick={() => handleOpenTestimonialModal()} className="bg-primary hover:bg-primary/90">
+                <Plus className="w-4 h-4 mr-2" /> Add Testimonial
+              </Button>
+            </div>
+
+            {testimonialsLoading ? (
+              <div className="space-y-4">{[1,2,3,4].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>
+            ) : testimonialsList.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4">
+                {testimonialsList.map(t => (
+                  <Card key={t.id} className="border-border">
+                    <CardContent className="p-5">
+                      <div className="flex items-start gap-4">
+                        <img
+                          src={t.avatarUrl}
+                          alt={t.name}
+                          className="w-12 h-12 rounded-full object-cover flex-shrink-0 border-2 border-border"
+                          onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=1e3a8a&color=fff`; }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-1">
+                            <span className="font-semibold text-foreground text-sm">{t.name}</span>
+                            <span className="text-muted-foreground text-xs">·</span>
+                            <span className="text-sm text-muted-foreground">{t.role}</span>
+                            <span className="text-muted-foreground text-xs">·</span>
+                            <span className="text-sm text-muted-foreground">{t.country}</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground italic line-clamp-2">"{t.quote}"</p>
+                        </div>
+                        <div className="flex gap-2 flex-shrink-0">
+                          <Button size="sm" variant="outline" onClick={() => handleOpenTestimonialModal(t)}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => handleDeleteTestimonial(t.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 text-muted-foreground">
+                <Quote className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                <p>No testimonials yet. Add your first success story.</p>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
 
       {/* Job Modal */}
@@ -810,6 +926,64 @@ export default function Admin() {
                 className="bg-primary hover:bg-primary/90"
               >
                 {createJob.isPending || updateJob.isPending ? "Saving..." : editingJob ? "Update Job" : "Create Job"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Testimonial Modal */}
+      {testimonialModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-sm shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="font-serif text-xl font-bold text-primary">{editingTestimonial ? "Edit Testimonial" : "Add Testimonial"}</h2>
+              <Button variant="ghost" size="sm" onClick={() => setTestimonialModalOpen(false)}><X className="w-4 h-4" /></Button>
+            </div>
+            <div className="p-6 space-y-4">
+              {[
+                { label: "Full Name *", key: "name", placeholder: "e.g. James Mwangi" },
+                { label: "Job Role *", key: "role", placeholder: "e.g. Civil Engineer" },
+                { label: "Country *", key: "country", placeholder: "e.g. Kenya → Australia" },
+                { label: "Avatar Photo URL *", key: "avatarUrl", placeholder: "https://randomuser.me/api/portraits/men/1.jpg" },
+              ].map(({ label, key, placeholder }) => (
+                <div key={key}>
+                  <Label className="mb-1 block text-sm">{label}</Label>
+                  <Input
+                    value={testimonialForm[key as keyof typeof testimonialForm]}
+                    onChange={e => setTestimonialForm(p => ({ ...p, [key]: e.target.value }))}
+                    placeholder={placeholder}
+                  />
+                </div>
+              ))}
+              <div>
+                <Label className="mb-1 block text-sm">Testimonial Quote *</Label>
+                <Textarea
+                  value={testimonialForm.quote}
+                  onChange={e => setTestimonialForm(p => ({ ...p, quote: e.target.value }))}
+                  placeholder="Their success story in their own words..."
+                  className="min-h-[120px]"
+                />
+              </div>
+              {testimonialForm.avatarUrl && (
+                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-sm">
+                  <img
+                    src={testimonialForm.avatarUrl}
+                    alt="Preview"
+                    className="w-12 h-12 rounded-full object-cover border-2 border-border"
+                    onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(testimonialForm.name || "Preview")}&background=1e3a8a&color=fff`; }}
+                  />
+                  <p className="text-xs text-muted-foreground">Avatar preview — use randomuser.me portrait URLs for realistic photos</p>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 p-6 border-t">
+              <Button variant="outline" onClick={() => setTestimonialModalOpen(false)}>Cancel</Button>
+              <Button
+                onClick={handleSaveTestimonial}
+                disabled={!testimonialForm.name || !testimonialForm.role || !testimonialForm.country || !testimonialForm.quote || !testimonialForm.avatarUrl}
+                className="bg-primary hover:bg-primary/90"
+              >
+                {editingTestimonial ? "Update Testimonial" : "Create Testimonial"}
               </Button>
             </div>
           </div>

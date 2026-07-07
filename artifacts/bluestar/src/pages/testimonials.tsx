@@ -108,7 +108,7 @@ export default function Testimonials() {
               </blockquote>
               <div className="flex items-center gap-5">
                 <img
-                  src={avatarMap[featured.name] ?? featured.avatarUrl ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(featured.name)}&background=fff&color=1e3a8a&size=128`}
+                  src={featured.avatarUrl ?? avatarMap[featured.name] ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(featured.name)}&background=fff&color=1e3a8a&size=128`}
                   alt={featured.name}
                   className="w-20 h-20 rounded-full border-2 border-accent object-cover object-top"
                   onError={(e) => {
@@ -162,7 +162,7 @@ export default function Testimonials() {
                   </p>
                   <div className="flex items-center gap-4 pt-4 border-t border-border">
                     <img
-                      src={avatarMap[t.name] ?? t.avatarUrl ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=1e3a8a&color=fff&size=128`}
+                      src={t.avatarUrl ?? avatarMap[t.name] ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=1e3a8a&color=fff&size=128`}
                       alt={t.name}
                       className="w-12 h-12 rounded-full border-2 border-border object-cover object-top flex-shrink-0"
                       onError={(e) => {

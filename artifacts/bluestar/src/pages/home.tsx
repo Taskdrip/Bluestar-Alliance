@@ -6,9 +6,6 @@ import { useEffect } from "react";
 import hero1 from "@/assets/hero-1.png";
 import hero2 from "@/assets/hero-2.png";
 import hero3 from "@/assets/hero-3.png";
-import avatarJamesMwangi from "@/assets/avatars/james-mwangi.jpg";
-import avatarMariaSantos from "@/assets/avatars/maria-santos.jpg";
-import avatarRobertoDelgado from "@/assets/avatars/roberto-delgado.jpg";
 import img1 from "@assets/WhatsApp_Image_2026-06-26_at_6.21.31_PM_(1)_1782495714036.jpeg";
 import img2 from "@assets/WhatsApp_Image_2026-06-26_at_6.21.45_PM_1782495714036.jpeg";
 import img3 from "@assets/WhatsApp_Image_2026-06-26_at_6.21.46_PM_1782495687081.jpeg";
@@ -122,10 +119,20 @@ export default function Home() {
             </div>
             <div className="flex flex-col items-center p-4">
               <Award className="w-12 h-12 text-primary mb-4" />
-              <h3 className="font-serif text-3xl font-bold text-primary mb-2">74+</h3>
-              <p className="text-muted-foreground font-medium uppercase tracking-wider text-sm">Deferred Option Users</p>
+              <h3 className="font-serif text-3xl font-bold text-primary mb-2">94%</h3>
+              <p className="text-muted-foreground font-medium uppercase tracking-wider text-sm">Successful Employment Rate</p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Recruitment Identity Banner */}
+      <section className="py-10 bg-accent text-accent-foreground">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-lg font-semibold tracking-wide">
+            🌍 Specialised International Recruitment Agency &mdash; Connecting Skilled Professionals (Ages 21–55) with Global Employers Since 2006
+          </p>
+          <p className="text-sm mt-2 opacity-80">94% Successful Employment Rate &bull; Mining &bull; Construction &bull; Oil &amp; Gas &bull; Maritime &bull; Healthcare &bull; Hospitality &amp; More</p>
         </div>
       </section>
 
@@ -146,8 +153,11 @@ export default function Home() {
               </div>
             ))}
           </div>
-          <p className="text-primary-foreground/80 text-lg max-w-2xl mx-auto mb-8">
+          <p className="text-primary-foreground/80 text-lg max-w-2xl mx-auto mb-4">
             Apply with us today. <strong>Skilled and experienced only.</strong>
+          </p>
+          <p className="text-primary-foreground/70 text-sm max-w-xl mx-auto mb-8">
+            Open to applicants aged <strong>21 to 55 years</strong>. All nationalities welcome. Our 94% placement success rate means your career change is in expert hands.
           </p>
           <Link href="/apply">
             <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 text-lg px-10 h-14">
@@ -313,17 +323,17 @@ export default function Home() {
             {[
               {
                 name: "James Mwangi", role: "Civil Engineer", country: "Kenya → Australia",
-                avatar: avatarJamesMwangi,
+                avatar: "https://randomuser.me/api/portraits/men/32.jpg",
                 quote: "Bluestar placed me with a major infrastructure consortium in Perth within six weeks. Three years on, I'm a senior site engineer leading a $240 million bridge project. This agency genuinely changed my life.",
               },
               {
                 name: "Maria Santos", role: "Registered Nurse", country: "Philippines → UK",
-                avatar: avatarMariaSantos,
+                avatar: "https://randomuser.me/api/portraits/women/45.jpg",
                 quote: "Bluestar's healthcare division matched me with an NHS trust in Manchester. They arranged my NMC registration support and relocation. I'm now a charge nurse in the ICU earning four times my previous salary.",
               },
               {
                 name: "Roberto Delgado", role: "Offshore Drilling Supervisor", country: "Mexico → Norway",
-                avatar: avatarRobertoDelgado,
+                avatar: "https://randomuser.me/api/portraits/men/22.jpg",
                 quote: "Bluestar's oil and gas team knew exactly which operators were hiring, coached me on the interviews, and had me on a rig in the North Sea within four months. I couldn't be happier.",
               },
             ].map((t) => (
