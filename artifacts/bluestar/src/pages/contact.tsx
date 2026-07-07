@@ -10,7 +10,7 @@ const offices = [
   {
     city: "Michigan, USA",
     badge: "Global Headquarters",
-    address: "100 Corporate Center Drive, Suite 400\nDetroit, MI 48226\nUnited States",
+    address: "150, West Jefferson Avenue\nDetroit, Michigan 48201\nUnited States",
     phone: "+1 (800) 555-BLUE",
     email: "usa@bluestaralliance.com",
     hours: "Mon – Fri: 8:00 am – 6:00 pm EST",

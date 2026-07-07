@@ -55,7 +55,7 @@ const offices = [
   {
     city: "Michigan, USA",
     role: "Global Headquarters",
-    address: "100 Corporate Center Drive, Suite 400, Detroit, MI 48226",
+    address: "150, West Jefferson Avenue, Detroit, Michigan 48201, United States",
     focus: "Corporate governance, North & South America recruitment, finance",
   },
   {

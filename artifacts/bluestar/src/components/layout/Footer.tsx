@@ -42,8 +42,9 @@ export default function Footer() {
                 <span>Follow us on Facebook</span>
               </a>
               <div className="pt-4 border-t border-primary-foreground/20">
-                <p>Michigan, USA</p>
-                <p>Perth, Australia</p>
+                <p>150, West Jefferson Avenue</p>
+                <p>Detroit, Michigan 48201, USA</p>
+                <p className="mt-2">Perth, Australia</p>
               </div>
             </div>
           </div>
