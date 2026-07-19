@@ -14,7 +14,7 @@ export default function Footer() {
               </div>
             </Link>
             <p className="text-primary-foreground/80 max-w-md mt-4 text-sm leading-relaxed">
-              A premium multinational recruitment agency radiating over 18 years of proven trust, global scale, and professional excellence. The foundation for your global career.
+              A premium multinational company and recruitment agency radiating over 18 years of proven trust, global scale, and professional excellence. The foundation for your global career.
             </p>
           </div>
           
