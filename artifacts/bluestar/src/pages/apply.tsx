@@ -10,8 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { useState, useEffect } from "react";
-import { CheckCircle2, UploadCloud, CreditCard, Copy, AlertCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { CheckCircle2, UploadCloud, CreditCard, Copy, AlertCircle, FileText, X } from "lucide-react";
 
 const applicationSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
@@ -62,6 +62,14 @@ export default function Apply() {
   const [addonOrderSubmitted, setAddonOrderSubmitted] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
+  // CV upload state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [cvUploading, setCvUploading] = useState(false);
+  const [cvUploadedUrl, setCvUploadedUrl] = useState<string | null>(null);
+  const [cvError, setCvError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
   const submitApplication = useSubmitApplication();
 
   const form = useForm<ApplicationFormValues>({
@@ -100,6 +108,63 @@ export default function Apply() {
     });
   }
 
+  async function uploadCv(file: File) {
+    setCvError(null);
+    setCvUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("cv", file);
+      const res = await fetch("/api/upload/cv", { method: "POST", body: formData });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Upload failed");
+      }
+      const data = await res.json();
+      setCvUploadedUrl(data.url);
+    } catch (e: any) {
+      setCvError(e.message || "Failed to upload CV. Please try again.");
+      setCvFile(null);
+    } finally {
+      setCvUploading(false);
+    }
+  }
+
+  function handleFileSelect(file: File) {
+    const allowed = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (!allowed.includes(file.type) && !["pdf", "doc", "docx"].includes(ext ?? "")) {
+      setCvError("Only PDF, DOC, or DOCX files are allowed.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setCvError("File size must be under 5MB.");
+      return;
+    }
+    setCvFile(file);
+    setCvUploadedUrl(null);
+    uploadCv(file);
+  }
+
+  function handleFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) handleFileSelect(file);
+    // reset so the same file can be re-selected
+    e.target.value = "";
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFileSelect(file);
+  }
+
+  function removeCv() {
+    setCvFile(null);
+    setCvUploadedUrl(null);
+    setCvError(null);
+  }
+
   async function handleAddonOrder() {
     if (!applicationId || !submittedData) return;
     try {
@@ -118,8 +183,7 @@ export default function Apply() {
         }),
       });
       setAddonOrderSubmitted(true);
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   function onSubmit(data: ApplicationFormValues) {
@@ -127,7 +191,7 @@ export default function Apply() {
       data: {
         ...data,
         yearsOfExperience: Number(data.yearsOfExperience),
-        cvFileName: "uploaded-cv.pdf",
+        cvFileName: cvUploadedUrl ?? (cvFile ? cvFile.name : undefined),
       }
     }, {
       onSuccess: (result: any) => {
@@ -406,11 +470,68 @@ export default function Apply() {
                 {/* CV Upload */}
                 <div>
                   <Label className="text-foreground mb-3 block">Resume / Curriculum Vitae</Label>
-                  <div className="border-2 border-dashed border-border rounded-sm p-8 text-center bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer group">
-                    <UploadCloud className="w-10 h-10 text-muted-foreground mx-auto mb-4 group-hover:text-primary transition-colors" />
-                    <p className="text-sm font-medium text-foreground">Click to upload or drag and drop</p>
-                    <p className="text-xs text-muted-foreground mt-1">PDF, DOCX, or DOC (Max 5MB)</p>
-                  </div>
+
+                  {/* Hidden file input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    className="hidden"
+                    onChange={handleFileInputChange}
+                  />
+
+                  {cvFile ? (
+                    /* Uploaded file display */
+                    <div className="border-2 border-border rounded-sm p-4 bg-muted/20">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <FileText className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{cvFile.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(cvFile.size / 1024).toFixed(0)} KB
+                            {cvUploading && " · Uploading..."}
+                            {cvUploadedUrl && !cvUploading && " · Uploaded ✓"}
+                          </p>
+                        </div>
+                        {cvUploading ? (
+                          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={removeCv}
+                            className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    /* Drop zone */
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                      onDragLeave={() => setIsDragging(false)}
+                      onDrop={handleDrop}
+                      className={`border-2 border-dashed rounded-sm p-8 text-center transition-colors cursor-pointer group ${
+                        isDragging
+                          ? "border-primary bg-primary/5"
+                          : "border-border bg-muted/20 hover:bg-muted/40 hover:border-primary/50"
+                      }`}
+                    >
+                      <UploadCloud className={`w-10 h-10 mx-auto mb-4 transition-colors ${isDragging ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
+                      <p className="text-sm font-medium text-foreground">Click to upload or drag and drop</p>
+                      <p className="text-xs text-muted-foreground mt-1">PDF, DOCX, or DOC (Max 5MB)</p>
+                    </div>
+                  )}
+
+                  {cvError && (
+                    <p className="text-sm text-destructive mt-2 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" /> {cvError}
+                    </p>
+                  )}
                 </div>
 
                 <FormField
@@ -488,9 +609,15 @@ export default function Apply() {
                     type="submit"
                     size="lg"
                     className="w-full md:w-auto bg-primary hover:bg-primary/90 rounded-sm text-lg px-10 h-14"
-                    disabled={submitApplication.isPending}
+                    disabled={submitApplication.isPending || cvUploading}
                   >
-                    {submitApplication.isPending ? "Submitting..." : hasAddons ? "Submit & Continue to Payment" : "Submit Application"}
+                    {submitApplication.isPending
+                      ? "Submitting..."
+                      : cvUploading
+                      ? "Uploading CV..."
+                      : hasAddons
+                      ? "Submit & Continue to Payment"
+                      : "Submit Application"}
                   </Button>
                 </div>
               </form>

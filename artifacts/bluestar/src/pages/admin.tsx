@@ -185,13 +185,26 @@ export default function Admin() {
     }
   }, [activeTab, user]);
 
+  // Fetch messages once when app selected, then poll every 4 s while chat is open
   useEffect(() => {
-    if (selectedAppId) {
+    if (!selectedAppId) return;
+
+    let cancelled = false;
+
+    const fetchMessages = () => {
       fetch(`/api/messages/${selectedAppId}`)
-        .then(r => r.json())
-        .then(data => setMessages(data))
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => { if (!cancelled) setMessages(data); })
         .catch(() => {});
-    }
+    };
+
+    fetchMessages(); // immediate load
+    const timer = setInterval(fetchMessages, 4000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
   }, [selectedAppId]);
 
   useEffect(() => {

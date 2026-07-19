@@ -12,6 +12,7 @@ import addonOrdersRouter from "./addon-orders";
 import pushRouter from "./push";
 import emailRouter from "./email";
 import newsletterRouter from "./newsletter";
+import uploadRouter from "./upload";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use("/addon-orders", addonOrdersRouter);
 router.use("/push", pushRouter);
 router.use("/email", emailRouter);
 router.use("/newsletter", newsletterRouter);
+router.use("/upload", uploadRouter);
 
 export default router;
