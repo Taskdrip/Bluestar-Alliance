@@ -7,49 +7,60 @@ interface PopupData {
   title: string;
   body: string;
   isActive: boolean;
+  delaySeconds: number;
   updatedAt: string;
 }
 
 // Shown if the API is unavailable or no popup is configured yet
-const FALLBACK: Omit<PopupData, "id" | "updatedAt" | "isActive"> = {
-  imageUrl: null,
+const FALLBACK_CONTENT = {
+  imageUrl: null as null,
   title: "Bluestar Alliance Company Limited",
   body: "Bluestar Alliance Company Limited and its authorized recruiting channels DO NOT CHARGE recruitment or deployment fees from applicants / candidates.\n\nBEWARE OF ILLEGAL RECRUITERS AND SCAMMERS.",
+  delaySeconds: 60,
 };
 
 const DISMISSED_KEY = "bluestar_popup_dismissed_v2";
-const DELAY_MS = 60_000; // 1 minute
+const DEFAULT_DELAY_MS = 60_000;
 
 export default function AnnouncementPopup() {
-  const [popup, setPopup] = useState<Omit<PopupData, "id" | "updatedAt" | "isActive"> | null>(null);
+  const [popup, setPopup] = useState<typeof FALLBACK_CONTENT | null>(null);
   const [visible, setVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     if (sessionStorage.getItem(DISMISSED_KEY)) return;
 
-    const timer = setTimeout(() => {
-      fetch("/api/announcement-popup")
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data: PopupData | null) => {
-          const content = data && data.isActive ? data : FALLBACK;
-          setPopup(content);
+    // Fetch config first (to get the admin-configured delay), then schedule the popup
+    fetch("/api/announcement-popup")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: PopupData | null) => {
+        if (data && data.isActive) {
+          const delay = typeof data.delaySeconds === "number" && data.delaySeconds >= 0
+            ? data.delaySeconds * 1000
+            : DEFAULT_DELAY_MS;
+          const timer = setTimeout(() => {
+            setPopup({ imageUrl: data.imageUrl, title: data.title, body: data.body, delaySeconds: data.delaySeconds });
+            setMounted(true);
+            requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)));
+          }, delay);
+          return () => clearTimeout(timer);
+        }
+        // Show fallback after default delay when API is unavailable or inactive
+        const timer = setTimeout(() => {
+          setPopup(FALLBACK_CONTENT);
           setMounted(true);
-          requestAnimationFrame(() =>
-            requestAnimationFrame(() => setVisible(true))
-          );
-        })
-        .catch(() => {
-          // API unavailable — show fallback
-          setPopup(FALLBACK);
+          requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)));
+        }, DEFAULT_DELAY_MS);
+        return () => clearTimeout(timer);
+      })
+      .catch(() => {
+        const timer = setTimeout(() => {
+          setPopup(FALLBACK_CONTENT);
           setMounted(true);
-          requestAnimationFrame(() =>
-            requestAnimationFrame(() => setVisible(true))
-          );
-        });
-    }, DELAY_MS);
-
-    return () => clearTimeout(timer);
+          requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)));
+        }, DEFAULT_DELAY_MS);
+        return () => clearTimeout(timer);
+      });
   }, []);
 
   const dismiss = useCallback(() => {
@@ -61,9 +72,7 @@ export default function AnnouncementPopup() {
   // ESC key
   useEffect(() => {
     if (!mounted) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") dismiss();
-    };
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") dismiss(); };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [mounted, dismiss]);
@@ -90,7 +99,6 @@ export default function AnnouncementPopup() {
       className={`fixed inset-0 z-[300] flex items-center justify-center p-4 transition-opacity duration-400 ${
         visible ? "opacity-100" : "opacity-0 pointer-events-none"
       }`}
-      onClick={(e) => { if (e.target === e.currentTarget) dismiss(); }}
     >
       {/* Backdrop */}
       <div
@@ -124,26 +132,19 @@ export default function AnnouncementPopup() {
               alt="Announcement"
               className="w-full h-full object-cover"
             />
-            {/* Gradient overlay so close button is always visible */}
             <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-transparent" />
           </div>
         ) : (
-          /* Decorative hero band */
           <div className="relative w-full bg-[hsl(224,76%,22%)] pt-10 pb-8 px-7 flex flex-col items-center text-center overflow-hidden">
-            {/* Subtle radial glow */}
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,hsl(44,96%,52%,0.25),transparent_70%)]" />
-
-            {/* Outer ring + icon */}
             <div className="relative mb-4">
               <div className="w-20 h-20 rounded-full bg-amber-400/10 border border-amber-400/30 flex items-center justify-center">
                 <div className="w-14 h-14 rounded-full bg-amber-400/20 border border-amber-400/40 flex items-center justify-center">
                   <ShieldAlert className="w-7 h-7 text-amber-400" />
                 </div>
               </div>
-              {/* Pulse ring */}
               <div className="absolute inset-0 rounded-full border border-amber-400/40 animate-ping opacity-30" />
             </div>
-
             <p className="text-[10px] font-bold tracking-[0.25em] uppercase text-amber-400/90 mb-2">
               Official Notice
             </p>

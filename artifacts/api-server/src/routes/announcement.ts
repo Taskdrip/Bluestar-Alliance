@@ -29,6 +29,7 @@ function serialize(row: any) {
     title: row.title,
     body: row.body,
     isActive: row.isActive,
+    delaySeconds: row.delaySeconds ?? 60,
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
@@ -52,7 +53,7 @@ router.put("/admin", async (req, res) => {
   const auth = await requireAdmin(req, res);
   if (!auth) return;
 
-  const { imageUrl, title, body, isActive } = req.body;
+  const { imageUrl, title, body, isActive, delaySeconds } = req.body;
 
   if (typeof title !== "string" || !title.trim()) {
     res.status(400).json({ error: "title is required" });
@@ -62,6 +63,11 @@ router.put("/admin", async (req, res) => {
     res.status(400).json({ error: "body is required" });
     return;
   }
+
+  const resolvedDelay =
+    typeof delaySeconds === "number" && delaySeconds >= 0
+      ? Math.round(delaySeconds)
+      : 60;
 
   try {
     const existing = await db.select().from(announcementPopupTable).limit(1);
@@ -74,6 +80,7 @@ router.put("/admin", async (req, res) => {
           title: title.trim(),
           body: body.trim(),
           isActive: typeof isActive === "boolean" ? isActive : true,
+          delaySeconds: resolvedDelay,
           updatedAt: new Date(),
         })
         .where(eq(announcementPopupTable.id, existing[0].id))
@@ -87,6 +94,7 @@ router.put("/admin", async (req, res) => {
           title: title.trim(),
           body: body.trim(),
           isActive: typeof isActive === "boolean" ? isActive : true,
+          delaySeconds: resolvedDelay,
         })
         .returning();
       res.json(serialize(created));

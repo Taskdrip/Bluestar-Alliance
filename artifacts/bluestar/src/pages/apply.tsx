@@ -644,9 +644,26 @@ export default function Apply() {
     }, {
       onSuccess: (result: any) => {
         setSubmittedData(data);
-        setApplicationId(result?.id || null);
+        const appId = result?.id || null;
+        setApplicationId(appId);
+
         if (hasAddons) {
-          setShowPayment(true);
+          // Fire pay-later addon order silently in background
+          fetch("/api/addon-orders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              applicationId: appId,
+              applicantEmail: data.email,
+              applicantName: data.fullName,
+              visaSponsorship: selectedAddons.visaSponsorship,
+              flightTicket: selectedAddons.flightTicket,
+              workPermit: selectedAddons.workPermit,
+              totalAmount: 0,
+              paymentMethod: "pay_later",
+            }),
+          }).catch(() => {});
+          setIsPayLaterSuccess(true);
         } else {
           setIsSuccess(true);
         }
@@ -1126,7 +1143,6 @@ export default function Apply() {
                               <div className="flex-1">
                                 <p className="font-semibold text-foreground mb-1">{addon.label}</p>
                                 <p className="text-xs text-muted-foreground leading-relaxed">{addon.description}</p>
-                                <p className="text-sm font-bold text-primary mt-2">${addon.price}</p>
                               </div>
                             </div>
                           </div>
@@ -1134,12 +1150,12 @@ export default function Apply() {
                       })}
                     </div>
                     {hasAddons && (
-                      <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-sm flex items-center justify-between">
+                      <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-sm flex items-center gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
                         <div>
                           <p className="font-semibold text-primary">Add-ons Selected</p>
-                          <p className="text-sm text-muted-foreground">Payment via bank transfer after submission — you can also choose to pay later.</p>
+                          <p className="text-sm text-muted-foreground">Our team will contact you about these services after your application is reviewed.</p>
                         </div>
-                        <span className="text-xl font-bold text-primary">${totalAddonAmount}</span>
                       </div>
                     )}
                   </div>
@@ -1162,8 +1178,6 @@ export default function Apply() {
                         ? "Submitting..."
                         : cvUploading
                         ? "Uploading CV..."
-                        : hasAddons
-                        ? "Submit & Proceed to Payment"
                         : "Submit Application"}
                     </Button>
                   </div>

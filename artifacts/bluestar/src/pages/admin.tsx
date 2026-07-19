@@ -30,7 +30,7 @@ import {
   AlertCircle, Briefcase, CheckCircle, Clock, FileText, Users,
   Plus, Pencil, Trash2, Send, MessageSquare, CreditCard, Settings,
   Package, Eye, X, Quote, Mail, Newspaper, Database, Shield, Megaphone,
-  UploadCloud, ShieldAlert
+  UploadCloud, ShieldAlert, Bell, Timer
 } from "lucide-react";
 import EmailTab from "./admin-email";
 import NewsletterTab from "./admin-newsletter";
@@ -38,9 +38,9 @@ import UsersTab from "./admin-users";
 import TeamTab from "./admin-team";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-type Tab = "overview" | "applications" | "jobs" | "chat" | "email" | "newsletter" | "payment" | "orders" | "testimonials" | "users" | "team" | "popup";
+type Tab = "overview" | "applications" | "jobs" | "chat" | "email" | "newsletter" | "payment" | "orders" | "testimonials" | "users" | "team" | "popup" | "push";
 
-const ALL_TAB_IDS = ["overview","applications","jobs","testimonials","chat","email","newsletter","payment","orders","users","popup"] as const;
+const ALL_TAB_IDS = ["overview","applications","jobs","testimonials","chat","email","newsletter","payment","orders","users","popup","push"] as const;
 
 export default function Admin() {
   const [, setLocation] = useLocation();
@@ -87,12 +87,18 @@ export default function Admin() {
   const [testimonialForm, setTestimonialForm] = useState({ name: "", role: "", country: "", quote: "", avatarUrl: "" });
 
   // Announcement popup state
-  const [popupForm, setPopupForm] = useState({ title: "", body: "", imageUrl: "", isActive: true });
+  const [popupForm, setPopupForm] = useState({ title: "", body: "", imageUrl: "", isActive: true, delayMinutes: 1 });
   const [popupSaving, setPopupSaving] = useState(false);
   const [popupSaved, setPopupSaved] = useState(false);
   const [popupImageUploading, setPopupImageUploading] = useState(false);
   const [popupImageError, setPopupImageError] = useState<string | null>(null);
   const popupFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Push notification blast state
+  const [pushForm, setPushForm] = useState({ title: "", body: "", url: "", segment: "all" });
+  const [pushSending, setPushSending] = useState(false);
+  const [pushResult, setPushResult] = useState<{ sent: number; failed: number; total: number; message?: string } | null>(null);
+  const [pushError, setPushError] = useState<string | null>(null);
 
   // Notification badge
   const [unreadNotifs, setUnreadNotifs] = useState(0);
@@ -205,6 +211,7 @@ export default function Admin() {
               body: data.body || "",
               imageUrl: data.imageUrl || "",
               isActive: data.isActive ?? true,
+              delayMinutes: typeof data.delaySeconds === "number" ? Math.max(0.5, data.delaySeconds / 60) : 1,
             });
           }
         })
@@ -436,7 +443,10 @@ export default function Admin() {
       const res = await fetch("/api/announcement-popup/admin", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(popupForm),
+        body: JSON.stringify({
+          ...popupForm,
+          delaySeconds: Math.round((popupForm.delayMinutes || 1) * 60),
+        }),
       });
       if (res.ok) {
         setPopupSaved(true);
@@ -484,6 +494,7 @@ export default function Admin() {
     { id: "orders", label: "Add-on Orders", icon: Package },
     { id: "users", label: "Users DB", icon: Database },
     { id: "popup", label: "Announcement Popup", icon: Megaphone },
+    { id: "push", label: "Push Notifications", icon: Bell },
     { id: "team", label: "Admin Team", icon: Shield, superAdminOnly: true },
   ];
 
@@ -1053,6 +1064,29 @@ export default function Admin() {
                   />
                 </div>
 
+                {/* Delay setting */}
+                <div>
+                  <Label className="text-foreground mb-2 block font-medium flex items-center gap-2">
+                    <Timer className="w-4 h-4 text-muted-foreground" />
+                    Popup Delay
+                  </Label>
+                  <div className="flex items-center gap-3">
+                    <Input
+                      type="number"
+                      min="0.5"
+                      max="60"
+                      step="0.5"
+                      value={popupForm.delayMinutes}
+                      onChange={e => setPopupForm(p => ({ ...p, delayMinutes: Math.max(0.5, parseFloat(e.target.value) || 1) }))}
+                      className="bg-background w-28"
+                    />
+                    <span className="text-sm text-muted-foreground">minutes after page load</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    Current: popup appears {popupForm.delayMinutes === 1 ? "1 minute" : `${popupForm.delayMinutes} minutes`} after a visitor loads the site.
+                  </p>
+                </div>
+
                 {/* Active toggle */}
                 <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/30 border border-border">
                   <input
@@ -1122,6 +1156,154 @@ export default function Admin() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── PUSH NOTIFICATIONS ───────────────────────────────────── */}
+        {activeTab === "push" && (
+          <div className="max-w-2xl space-y-6">
+            <div>
+              <h2 className="font-serif text-2xl font-bold text-primary mb-1">Push Notification Blast</h2>
+              <p className="text-muted-foreground text-sm">
+                Send a push notification to a targeted segment of users who have enabled browser notifications.
+              </p>
+            </div>
+
+            <Card>
+              <CardContent className="pt-6 space-y-5">
+
+                {/* Segment selector */}
+                <div>
+                  <Label className="text-foreground mb-2 block font-medium">Target Segment</Label>
+                  <select
+                    value={pushForm.segment}
+                    onChange={e => { setPushForm(p => ({ ...p, segment: e.target.value })); setPushResult(null); setPushError(null); }}
+                    className="w-full border border-border rounded-md px-3 py-2 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  >
+                    <option value="all">🌐 All Users (everyone subscribed)</option>
+                    <option value="paid_addons">💼 Paid Add-on Users (have ordered add-ons)</option>
+                    <option value="free_applicants">📋 Free Applicants (applied, no add-ons)</option>
+                    <option value="approved">✅ Approved Users (application approved)</option>
+                    <option value="unapproved">⏳ Unapproved Users (pending / not yet approved)</option>
+                  </select>
+                </div>
+
+                {/* Title */}
+                <div>
+                  <Label className="text-foreground mb-2 block font-medium">Notification Title</Label>
+                  <Input
+                    value={pushForm.title}
+                    onChange={e => setPushForm(p => ({ ...p, title: e.target.value }))}
+                    placeholder="e.g. Your application has been updated"
+                    className="bg-background"
+                  />
+                </div>
+
+                {/* Body */}
+                <div>
+                  <Label className="text-foreground mb-2 block font-medium">Message</Label>
+                  <textarea
+                    value={pushForm.body}
+                    onChange={e => setPushForm(p => ({ ...p, body: e.target.value }))}
+                    placeholder="e.g. Log in to check your application status and next steps."
+                    rows={3}
+                    className="w-full border border-border rounded-md px-3 py-2 bg-background text-sm resize-y focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[80px]"
+                  />
+                </div>
+
+                {/* URL */}
+                <div>
+                  <Label className="text-foreground mb-2 block font-medium">
+                    Click URL <span className="text-muted-foreground font-normal">(optional)</span>
+                  </Label>
+                  <Input
+                    value={pushForm.url}
+                    onChange={e => setPushForm(p => ({ ...p, url: e.target.value }))}
+                    placeholder="e.g. /apply or https://bluestar-alliance.com/jobs"
+                    className="bg-background"
+                  />
+                </div>
+
+                {/* Result / Error feedback */}
+                {pushResult && (
+                  <div className={`flex items-start gap-3 p-4 rounded-lg border ${pushResult.failed === 0 ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"}`}>
+                    <CheckCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${pushResult.failed === 0 ? "text-green-600" : "text-amber-600"}`} />
+                    <div>
+                      <p className={`text-sm font-semibold ${pushResult.failed === 0 ? "text-green-800" : "text-amber-800"}`}>
+                        {pushResult.message || `Sent to ${pushResult.sent} of ${pushResult.total} subscribers`}
+                      </p>
+                      {!pushResult.message && pushResult.failed > 0 && (
+                        <p className="text-xs text-amber-700 mt-0.5">{pushResult.failed} expired subscriptions were removed automatically.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {pushError && (
+                  <div className="flex items-start gap-3 p-4 rounded-lg border bg-red-50 border-red-200">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-600" />
+                    <div>
+                      <p className="text-sm font-semibold text-red-800">Failed to send</p>
+                      <p className="text-xs text-red-700 mt-0.5">{pushError}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Send button */}
+                <div className="pt-2">
+                  <Button
+                    onClick={async () => {
+                      if (!pushForm.title.trim() || !pushForm.body.trim()) return;
+                      setPushSending(true); setPushResult(null); setPushError(null);
+                      try {
+                        const res = await fetch("/api/push/blast", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                          body: JSON.stringify({
+                            title: pushForm.title.trim(),
+                            body: pushForm.body.trim(),
+                            url: pushForm.url.trim() || "/",
+                            segment: pushForm.segment,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) {
+                          setPushError(data.error || "Send failed");
+                        } else {
+                          setPushResult(data);
+                        }
+                      } catch {
+                        setPushError("Network error — please try again.");
+                      } finally {
+                        setPushSending(false);
+                      }
+                    }}
+                    disabled={pushSending || !pushForm.title.trim() || !pushForm.body.trim()}
+                    className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
+                  >
+                    {pushSending ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Sending...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Send className="w-4 h-4" />
+                        Send Notification
+                      </span>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Info note */}
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50 border border-blue-100 text-sm text-blue-800">
+              <Bell className="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-500" />
+              <p>
+                Only users who have granted browser notification permission and are subscribed will receive this blast.
+                Segment filtering is based on application and add-on order records.
+              </p>
+            </div>
           </div>
         )}
 

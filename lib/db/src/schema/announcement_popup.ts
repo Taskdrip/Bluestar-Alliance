@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, boolean, integer } from "drizzle-orm/pg-core";
 
 export const announcementPopupTable = pgTable("announcement_popup", {
   id: serial("id").primaryKey(),
@@ -6,6 +6,7 @@ export const announcementPopupTable = pgTable("announcement_popup", {
   title: text("title").notNull().default("Important Notice"),
   body: text("body").notNull().default(""),
   isActive: boolean("is_active").notNull().default(true),
+  delaySeconds: integer("delay_seconds").notNull().default(60),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
