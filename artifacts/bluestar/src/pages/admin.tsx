@@ -29,13 +29,17 @@ import { format } from "date-fns";
 import {
   AlertCircle, Briefcase, CheckCircle, Clock, FileText, Users,
   Plus, Pencil, Trash2, Send, MessageSquare, CreditCard, Settings,
-  Package, Eye, X, Quote, Mail, Newspaper
+  Package, Eye, X, Quote, Mail, Newspaper, Database, Shield
 } from "lucide-react";
 import EmailTab from "./admin-email";
 import NewsletterTab from "./admin-newsletter";
+import UsersTab from "./admin-users";
+import TeamTab from "./admin-team";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-type Tab = "overview" | "applications" | "jobs" | "chat" | "email" | "newsletter" | "payment" | "orders" | "testimonials";
+type Tab = "overview" | "applications" | "jobs" | "chat" | "email" | "newsletter" | "payment" | "orders" | "testimonials" | "users" | "team";
+
+const ALL_TAB_IDS = ["overview","applications","jobs","testimonials","chat","email","newsletter","payment","orders","users"] as const;
 
 export default function Admin() {
   const [, setLocation] = useLocation();
@@ -198,7 +202,7 @@ export default function Admin() {
     return <div className="p-8 flex justify-center"><Skeleton className="h-12 w-12 rounded-full" /></div>;
   }
 
-  if (!user || user.role !== "admin") {
+  if (!user || (user.role !== "admin" && user.role !== "superadmin")) {
     setTimeout(() => setLocation("/login"), 3000);
     return (
       <div className="flex-1 flex items-center justify-center bg-muted/20">
@@ -367,7 +371,20 @@ export default function Admin() {
     }
   };
 
-  const tabs: { id: Tab; label: string; icon: any }[] = [
+  const isSuperAdmin = user.role === "superadmin";
+
+  // Admins with null permissions get full access; otherwise filter to granted perms
+  const adminPermissions: string[] | null = (user as any).permissions
+    ? JSON.parse((user as any).permissions)
+    : null;
+
+  const hasPermission = (tabId: string) => {
+    if (isSuperAdmin) return true;
+    if (adminPermissions === null) return true;
+    return adminPermissions.includes(tabId);
+  };
+
+  const allTabs: { id: Tab; label: string; icon: any; superAdminOnly?: boolean }[] = [
     { id: "overview", label: "Overview", icon: FileText },
     { id: "applications", label: "Applications", icon: Users },
     { id: "jobs", label: "Job Listings", icon: Briefcase },
@@ -377,7 +394,14 @@ export default function Admin() {
     { id: "newsletter", label: "Newsletter", icon: Newspaper },
     { id: "payment", label: "Payment Settings", icon: CreditCard },
     { id: "orders", label: "Add-on Orders", icon: Package },
+    { id: "users", label: "Users DB", icon: Database },
+    { id: "team", label: "Admin Team", icon: Shield, superAdminOnly: true },
   ];
+
+  const tabs = allTabs.filter(t => {
+    if (t.superAdminOnly) return isSuperAdmin;
+    return hasPermission(t.id);
+  });
 
   return (
     <div className="w-full bg-background min-h-screen pb-20">
@@ -705,6 +729,16 @@ export default function Admin() {
         {/* ── NEWSLETTER ───────────────────────────────────────────── */}
         {activeTab === "newsletter" && (
           <NewsletterTab token={token} />
+        )}
+
+        {/* ── USERS DATABASE ───────────────────────────────────────── */}
+        {activeTab === "users" && (
+          <UsersTab token={token} />
+        )}
+
+        {/* ── ADMIN TEAM (super admin only) ────────────────────────── */}
+        {activeTab === "team" && isSuperAdmin && (
+          <TeamTab token={token} />
         )}
 
         {/* ── PAYMENT SETTINGS ─────────────────────────────────────── */}

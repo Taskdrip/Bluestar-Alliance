@@ -75,7 +75,15 @@ router.get("/me", async (req, res) => {
     return;
   }
 
-  res.json({ id: user.id, email: user.email, fullName: user.fullName, role: user.role, createdAt: user.createdAt.toISOString() });
+  res.json({
+    id: user.id,
+    email: user.email,
+    fullName: user.fullName,
+    role: user.role,
+    permissions: user.permissions ?? null,
+    isDisabled: user.isDisabled,
+    createdAt: user.createdAt.toISOString(),
+  });
 });
 
 export default router;
