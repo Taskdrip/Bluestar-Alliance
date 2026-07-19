@@ -1,7 +1,7 @@
 import { Router } from "express";
 import {
   db, applicationsTable, jobsTable, paymentSettingsTable,
-  addonOrdersTable, notificationsTable, usersTable
+  addonOrdersTable, notificationsTable, usersTable, messagesTable
 } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 import { verifyToken, hashPassword } from "../lib/auth";
@@ -261,9 +261,12 @@ router.delete("/users/:id", async (req, res) => {
   if (target.role === "superadmin") { res.status(403).json({ error: "Cannot delete super admin" }); return; }
   if (target.id === auth.userId) { res.status(400).json({ error: "Cannot delete your own account" }); return; }
 
-  // Delete their applications + notifications first
+  // Cascade-delete in FK order: messages → addon_orders → applications → notifications → user
   const userApps = await db.select({ id: applicationsTable.id }).from(applicationsTable).where(eq(applicationsTable.email, target.email));
   if (userApps.length > 0) {
+    const appIds = userApps.map(a => a.id);
+    await db.delete(messagesTable).where(inArray(messagesTable.applicationId, appIds)).catch(() => {});
+    await db.delete(addonOrdersTable).where(inArray(addonOrdersTable.applicationId, appIds)).catch(() => {});
     await db.delete(applicationsTable).where(eq(applicationsTable.email, target.email));
   }
   await db.delete(notificationsTable).where(eq(notificationsTable.recipientEmail, target.email)).catch(() => {});
