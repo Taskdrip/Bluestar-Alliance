@@ -13,6 +13,7 @@ import pushRouter from "./push";
 import emailRouter from "./email";
 import newsletterRouter from "./newsletter";
 import uploadRouter from "./upload";
+import announcementRouter from "./announcement";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use("/push", pushRouter);
 router.use("/email", emailRouter);
 router.use("/newsletter", newsletterRouter);
 router.use("/upload", uploadRouter);
+router.use("/announcement-popup", announcementRouter);
 
 export default router;

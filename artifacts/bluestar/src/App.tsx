@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import AnnouncementPopup from "@/components/AnnouncementPopup";
 import Home from "@/pages/home";
 import Jobs from "@/pages/jobs";
 import Apply from "@/pages/apply";
@@ -53,6 +54,7 @@ function App() {
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <Router />
+          <AnnouncementPopup />
         </WouterRouter>
         <Toaster />
       </TooltipProvider>

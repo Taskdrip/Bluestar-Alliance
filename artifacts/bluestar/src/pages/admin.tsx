@@ -29,7 +29,8 @@ import { format } from "date-fns";
 import {
   AlertCircle, Briefcase, CheckCircle, Clock, FileText, Users,
   Plus, Pencil, Trash2, Send, MessageSquare, CreditCard, Settings,
-  Package, Eye, X, Quote, Mail, Newspaper, Database, Shield
+  Package, Eye, X, Quote, Mail, Newspaper, Database, Shield, Megaphone,
+  UploadCloud, ShieldAlert
 } from "lucide-react";
 import EmailTab from "./admin-email";
 import NewsletterTab from "./admin-newsletter";
@@ -37,9 +38,9 @@ import UsersTab from "./admin-users";
 import TeamTab from "./admin-team";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-type Tab = "overview" | "applications" | "jobs" | "chat" | "email" | "newsletter" | "payment" | "orders" | "testimonials" | "users" | "team";
+type Tab = "overview" | "applications" | "jobs" | "chat" | "email" | "newsletter" | "payment" | "orders" | "testimonials" | "users" | "team" | "popup";
 
-const ALL_TAB_IDS = ["overview","applications","jobs","testimonials","chat","email","newsletter","payment","orders","users"] as const;
+const ALL_TAB_IDS = ["overview","applications","jobs","testimonials","chat","email","newsletter","payment","orders","users","popup"] as const;
 
 export default function Admin() {
   const [, setLocation] = useLocation();
@@ -84,6 +85,14 @@ export default function Admin() {
   const [testimonialModalOpen, setTestimonialModalOpen] = useState(false);
   const [editingTestimonial, setEditingTestimonial] = useState<any>(null);
   const [testimonialForm, setTestimonialForm] = useState({ name: "", role: "", country: "", quote: "", avatarUrl: "" });
+
+  // Announcement popup state
+  const [popupForm, setPopupForm] = useState({ title: "", body: "", imageUrl: "", isActive: true });
+  const [popupSaving, setPopupSaving] = useState(false);
+  const [popupSaved, setPopupSaved] = useState(false);
+  const [popupImageUploading, setPopupImageUploading] = useState(false);
+  const [popupImageError, setPopupImageError] = useState<string | null>(null);
+  const popupFileInputRef = useRef<HTMLInputElement>(null);
 
   // Notification badge
   const [unreadNotifs, setUnreadNotifs] = useState(0);
@@ -184,6 +193,24 @@ export default function Admin() {
         .finally(() => setTestimonialsLoading(false));
     }
   }, [activeTab, user]);
+
+  useEffect(() => {
+    if (activeTab === "popup" && token) {
+      fetch("/api/announcement-popup/admin", { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data) {
+            setPopupForm({
+              title: data.title || "",
+              body: data.body || "",
+              imageUrl: data.imageUrl || "",
+              isActive: data.isActive ?? true,
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [activeTab, token]);
 
   // Fetch messages once when app selected, then poll every 4 s while chat is open
   useEffect(() => {
@@ -376,6 +403,47 @@ export default function Admin() {
     } catch {}
   };
 
+  const handlePopupImageUpload = async (file: File) => {
+    const allowed = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      setPopupImageError("Only JPG, PNG, GIF, or WEBP images are allowed.");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setPopupImageError("Image must be under 8MB.");
+      return;
+    }
+    setPopupImageError(null);
+    setPopupImageUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await fetch("/api/upload/image", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setPopupForm(p => ({ ...p, imageUrl: data.url }));
+    } catch {
+      setPopupImageError("Image upload failed. Please try again.");
+    } finally {
+      setPopupImageUploading(false);
+    }
+  };
+
+  const handleSavePopup = async () => {
+    if (!popupForm.title.trim() || !popupForm.body.trim()) return;
+    setPopupSaving(true);
+    try {
+      await fetch("/api/announcement-popup/admin", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(popupForm),
+      });
+      setPopupSaved(true);
+      setTimeout(() => setPopupSaved(false), 3000);
+    } catch {}
+    setPopupSaving(false);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "approved": case "paid": return "bg-green-500";
@@ -408,6 +476,7 @@ export default function Admin() {
     { id: "payment", label: "Payment Settings", icon: CreditCard },
     { id: "orders", label: "Add-on Orders", icon: Package },
     { id: "users", label: "Users DB", icon: Database },
+    { id: "popup", label: "Announcement Popup", icon: Megaphone },
     { id: "team", label: "Admin Team", icon: Shield, superAdminOnly: true },
   ];
 
@@ -868,6 +937,182 @@ export default function Admin() {
               <div className="text-center py-16 text-muted-foreground">
                 <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
                 <p>No add-on orders yet.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── ANNOUNCEMENT POPUP ───────────────────────────────────── */}
+        {activeTab === "popup" && (
+          <div className="max-w-2xl space-y-6">
+            <div>
+              <h2 className="font-serif text-2xl font-bold text-primary mb-1">Announcement Popup</h2>
+              <p className="text-muted-foreground text-sm">
+                Configure the sitewide popup shown to all visitors. Changes take effect immediately when published.
+              </p>
+            </div>
+
+            <Card>
+              <CardContent className="pt-6 space-y-6">
+
+                {/* Image upload */}
+                <div>
+                  <Label className="text-foreground mb-2 block font-medium">Popup Image</Label>
+                  <input
+                    ref={popupFileInputRef}
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.gif,.webp,image/*"
+                    className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handlePopupImageUpload(f); e.target.value = ""; }}
+                  />
+
+                  {popupForm.imageUrl ? (
+                    <div className="relative rounded-lg overflow-hidden border border-border bg-muted/20 group">
+                      <img
+                        src={popupForm.imageUrl}
+                        alt="Popup preview"
+                        className="w-full h-48 object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => popupFileInputRef.current?.click()}
+                          disabled={popupImageUploading}
+                        >
+                          <UploadCloud className="w-4 h-4 mr-1" />
+                          Replace
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setPopupForm(p => ({ ...p, imageUrl: "" }))}
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          Remove
+                        </Button>
+                      </div>
+                      {popupImageUploading && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => popupFileInputRef.current?.click()}
+                      className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                    >
+                      {popupImageUploading ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                          <p className="text-sm text-muted-foreground">Uploading image...</p>
+                        </div>
+                      ) : (
+                        <>
+                          <UploadCloud className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+                          <p className="text-sm font-medium text-foreground">Click to upload image</p>
+                          <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WEBP or GIF · Max 8MB</p>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {popupImageError && (
+                    <p className="text-sm text-destructive mt-2 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" /> {popupImageError}
+                    </p>
+                  )}
+                </div>
+
+                {/* Title */}
+                <div>
+                  <Label className="text-foreground mb-2 block font-medium">Popup Title</Label>
+                  <Input
+                    value={popupForm.title}
+                    onChange={e => setPopupForm(p => ({ ...p, title: e.target.value }))}
+                    placeholder="e.g. Important Notice"
+                    className="bg-background"
+                  />
+                </div>
+
+                {/* Body */}
+                <div>
+                  <Label className="text-foreground mb-2 block font-medium">Message Body</Label>
+                  <Textarea
+                    value={popupForm.body}
+                    onChange={e => setPopupForm(p => ({ ...p, body: e.target.value }))}
+                    placeholder="Enter the full announcement message..."
+                    className="bg-background min-h-[140px] resize-y"
+                  />
+                </div>
+
+                {/* Active toggle */}
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/30 border border-border">
+                  <input
+                    type="checkbox"
+                    id="popupActive"
+                    checked={popupForm.isActive}
+                    onChange={e => setPopupForm(p => ({ ...p, isActive: e.target.checked }))}
+                    className="w-4 h-4 accent-primary cursor-pointer"
+                  />
+                  <div>
+                    <Label htmlFor="popupActive" className="cursor-pointer font-medium">Show popup to all visitors</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">Uncheck to hide the popup sitewide without deleting content</p>
+                  </div>
+                </div>
+
+                {/* Save button */}
+                <div className="flex items-center gap-4 pt-2">
+                  <Button
+                    onClick={handleSavePopup}
+                    disabled={popupSaving || !popupForm.title.trim() || !popupForm.body.trim()}
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    {popupSaving ? "Publishing..." : "Publish Changes"}
+                  </Button>
+                  {popupSaved && (
+                    <div className="flex items-center gap-2 text-green-600 text-sm">
+                      <CheckCircle className="w-4 h-4" />
+                      Published successfully
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Live preview */}
+            {(popupForm.title || popupForm.body) && (
+              <div>
+                <Label className="text-foreground mb-3 block font-medium">Preview</Label>
+                <div className="border border-border rounded-xl overflow-hidden shadow-lg bg-white max-w-md">
+                  {popupForm.imageUrl ? (
+                    <div className="w-full aspect-[16/7] overflow-hidden bg-primary/10">
+                      <img src={popupForm.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-full h-2 bg-gradient-to-r from-primary via-accent to-primary" />
+                  )}
+                  <div className="px-6 py-5">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-full bg-amber-50 border-2 border-amber-200 flex items-center justify-center flex-shrink-0">
+                        <ShieldAlert className="w-5 h-5 text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold tracking-[0.2em] uppercase text-amber-600 leading-none mb-0.5">Official Notice</p>
+                        <h3 className="font-serif text-base font-bold text-primary leading-tight">{popupForm.title || "Popup Title"}</h3>
+                      </div>
+                    </div>
+                    <div className="h-px bg-gradient-to-r from-primary/20 via-amber-300/60 to-transparent mb-3" />
+                    <p className="text-xs leading-relaxed text-gray-700 whitespace-pre-line line-clamp-4">
+                      {popupForm.body || "Popup message will appear here..."}
+                    </p>
+                    <div className="mt-4 flex items-center gap-3">
+                      <div className="bg-primary text-white text-xs font-semibold px-4 py-1.5 rounded-md">I Understand</div>
+                      <p className="text-[10px] text-muted-foreground">— Bluestar Alliance Company Limited</p>
+                    </div>
+                  </div>
+                  <div className="h-1 bg-gradient-to-r from-primary via-accent to-primary" />
+                </div>
               </div>
             )}
           </div>

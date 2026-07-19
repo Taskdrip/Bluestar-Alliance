@@ -8,3 +8,4 @@ export * from "./payment_settings";
 export * from "./addon_orders";
 export * from "./push_subscriptions";
 export * from "./newsletter_subscribers";
+export * from "./announcement_popup";

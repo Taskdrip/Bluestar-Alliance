@@ -35,10 +35,43 @@ const upload = multer({
   },
 });
 
+const imageStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const name = `img_${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`;
+    cb(null, name);
+  },
+});
+
+const imageUpload = multer({
+  storage: imageStorage,
+  limits: { fileSize: 8 * 1024 * 1024 }, // 8 MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only JPG, PNG, GIF, and WEBP images are allowed"));
+    }
+  },
+});
+
 const router = Router();
 
 /** POST /api/upload/cv — accepts multipart/form-data with field "cv" */
 router.post("/cv", upload.single("cv"), (req, res) => {
+  if (!req.file) {
+    res.status(400).json({ error: "No file uploaded" });
+    return;
+  }
+  const fileUrl = `/uploads/${req.file.filename}`;
+  res.json({ url: fileUrl, fileName: req.file.filename, originalName: req.file.originalname });
+});
+
+/** POST /api/upload/image — accepts multipart/form-data with field "image" */
+router.post("/image", imageUpload.single("image"), (req, res) => {
   if (!req.file) {
     res.status(400).json({ error: "No file uploaded" });
     return;
