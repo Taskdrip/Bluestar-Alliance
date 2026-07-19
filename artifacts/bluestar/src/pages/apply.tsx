@@ -524,7 +524,7 @@ export default function Apply() {
 
   useEffect(() => {
     if (showPayment) {
-      fetch("/api/admin/payment-settings")
+      fetch("/api/payment-settings")
         .then(r => r.ok ? r.json() : null)
         .then(data => setPaymentSettings(data))
         .catch(() => {});

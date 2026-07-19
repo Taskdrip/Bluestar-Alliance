@@ -14,6 +14,7 @@ import emailRouter from "./email";
 import newsletterRouter from "./newsletter";
 import uploadRouter from "./upload";
 import announcementRouter from "./announcement";
+import { db, paymentSettingsTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,23 @@ router.use("/email", emailRouter);
 router.use("/newsletter", newsletterRouter);
 router.use("/upload", uploadRouter);
 router.use("/announcement-popup", announcementRouter);
+
+// Public read-only payment settings (applicants need bank details after addon selection)
+router.get("/payment-settings", async (_req, res) => {
+  try {
+    const [settings] = await db.select().from(paymentSettingsTable);
+    if (!settings) { res.status(404).json({ error: "Not configured" }); return; }
+    res.json({
+      bankName: settings.bankName,
+      accountName: settings.accountName,
+      accountNumber: settings.accountNumber,
+      routingNumber: settings.routingNumber ?? null,
+      swiftCode: settings.swiftCode ?? null,
+      additionalInfo: settings.additionalInfo ?? null,
+    });
+  } catch {
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 export default router;
