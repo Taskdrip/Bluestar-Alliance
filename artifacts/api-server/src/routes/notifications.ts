@@ -56,7 +56,7 @@ router.get("/", async (req, res) => {
       .from(notificationsTable)
       .orderBy(notificationsTable.createdAt);
     notifications = notifications.filter(
-      (n) => n.recipientEmail === user.email && n.recipientRole === "user"
+      (n) => n.recipientEmail === user.email && n.recipientRole === "candidate"
     );
   }
 

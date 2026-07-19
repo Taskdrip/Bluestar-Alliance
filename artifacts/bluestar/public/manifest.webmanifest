@@ -1,0 +1,17 @@
+{
+  "name": "Bluestar Alliance",
+  "short_name": "Bluestar",
+  "description": "Your global career partner — Bluestar Alliance Company Limited",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e3a8a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

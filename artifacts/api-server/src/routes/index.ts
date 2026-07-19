@@ -9,6 +9,9 @@ import statsRouter from "./stats";
 import messagesRouter from "./messages";
 import notificationsRouter from "./notifications";
 import addonOrdersRouter from "./addon-orders";
+import pushRouter from "./push";
+import emailRouter from "./email";
+import newsletterRouter from "./newsletter";
 
 const router: IRouter = Router();
 
@@ -22,5 +25,8 @@ router.use("/stats", statsRouter);
 router.use("/messages", messagesRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/addon-orders", addonOrdersRouter);
+router.use("/push", pushRouter);
+router.use("/email", emailRouter);
+router.use("/newsletter", newsletterRouter);
 
 export default router;

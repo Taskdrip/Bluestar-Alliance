@@ -29,11 +29,13 @@ import { format } from "date-fns";
 import {
   AlertCircle, Briefcase, CheckCircle, Clock, FileText, Users,
   Plus, Pencil, Trash2, Send, MessageSquare, CreditCard, Settings,
-  Package, Eye, X, Quote
+  Package, Eye, X, Quote, Mail, Newspaper
 } from "lucide-react";
+import EmailTab from "./admin-email";
+import NewsletterTab from "./admin-newsletter";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-type Tab = "overview" | "applications" | "jobs" | "chat" | "payment" | "orders" | "testimonials";
+type Tab = "overview" | "applications" | "jobs" | "chat" | "email" | "newsletter" | "payment" | "orders" | "testimonials";
 
 export default function Admin() {
   const [, setLocation] = useLocation();
@@ -371,6 +373,8 @@ export default function Admin() {
     { id: "jobs", label: "Job Listings", icon: Briefcase },
     { id: "testimonials", label: "Testimonials", icon: Quote },
     { id: "chat", label: "Chat", icon: MessageSquare },
+    { id: "email", label: "Email", icon: Mail },
+    { id: "newsletter", label: "Newsletter", icon: Newspaper },
     { id: "payment", label: "Payment Settings", icon: CreditCard },
     { id: "orders", label: "Add-on Orders", icon: Package },
   ];
@@ -691,6 +695,16 @@ export default function Admin() {
               )}
             </Card>
           </div>
+        )}
+
+        {/* ── EMAIL ────────────────────────────────────────────────── */}
+        {activeTab === "email" && (
+          <EmailTab token={token} applications={applications ?? []} />
+        )}
+
+        {/* ── NEWSLETTER ───────────────────────────────────────────── */}
+        {activeTab === "newsletter" && (
+          <NewsletterTab token={token} />
         )}
 
         {/* ── PAYMENT SETTINGS ─────────────────────────────────────── */}
