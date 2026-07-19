@@ -433,14 +433,21 @@ export default function Admin() {
     if (!popupForm.title.trim() || !popupForm.body.trim()) return;
     setPopupSaving(true);
     try {
-      await fetch("/api/announcement-popup/admin", {
+      const res = await fetch("/api/announcement-popup/admin", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(popupForm),
       });
-      setPopupSaved(true);
-      setTimeout(() => setPopupSaved(false), 3000);
-    } catch {}
+      if (res.ok) {
+        setPopupSaved(true);
+        setTimeout(() => setPopupSaved(false), 3000);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(`Save failed: ${(err as any).error || res.statusText}`);
+      }
+    } catch {
+      alert("Save failed: network error. Please try again.");
+    }
     setPopupSaving(false);
   };
 

@@ -938,8 +938,8 @@ export default function Apply() {
                     />
 
                     {/* Industry selector (controls sub-role list) */}
-                    <FormItem>
-                      <FormLabel className="text-foreground">Industry / Sector</FormLabel>
+                    <div className="space-y-2">
+                      <Label className="text-foreground">Industry / Sector</Label>
                       <Select
                         value={selectedIndustry}
                         onValueChange={(val) => {
@@ -956,7 +956,7 @@ export default function Apply() {
                           ))}
                         </SelectContent>
                       </Select>
-                    </FormItem>
+                    </div>
 
                     {/* Specific role — only enabled once industry is chosen */}
                     <FormField
