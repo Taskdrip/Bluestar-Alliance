@@ -164,7 +164,16 @@ export default function Navbar() {
             </div>
           ) : (
             <div className="flex items-center gap-4 border-l pl-4">
-              <Button variant="ghost" size="sm" onClick={() => setLocation("/login")}>Login</Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const redirect = location !== "/login" && location !== "/register" ? location : "/";
+                  setLocation(redirect === "/" ? "/login" : `/login?redirect=${encodeURIComponent(redirect)}`);
+                }}
+              >
+                Login
+              </Button>
             </div>
           )}
         </nav>
@@ -208,7 +217,15 @@ export default function Navbar() {
                     <Button variant="outline" className="w-full justify-start" onClick={handleLogout}>Logout</Button>
                   </>
                 ) : (
-                  <Button className="w-full justify-start" onClick={() => setLocation("/login")}>Login</Button>
+                  <Button
+                  className="w-full justify-start"
+                  onClick={() => {
+                    const redirect = location !== "/login" && location !== "/register" ? location : "/";
+                    setLocation(redirect === "/" ? "/login" : `/login?redirect=${encodeURIComponent(redirect)}`);
+                  }}
+                >
+                  Login
+                </Button>
                 )}
               </div>
             </SheetContent>

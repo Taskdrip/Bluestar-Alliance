@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLoginUser, getGetCurrentUserQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useLocation, Link } from "wouter";
+import { useLocation, useSearch, Link } from "wouter";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,8 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const [, setLocation] = useLocation();
+  const searchStr = useSearch();
+  const redirectTo = new URLSearchParams(searchStr).get("redirect") || "/";
   const queryClient = useQueryClient();
   const loginUser = useLoginUser();
 
@@ -38,7 +40,7 @@ export default function Login() {
       onSuccess: (res) => {
         localStorage.setItem("bluestar_token", res.token);
         queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
-        setLocation("/");
+        setLocation(redirectTo);
       }
     });
   }
@@ -107,7 +109,13 @@ export default function Login() {
         </CardContent>
         <CardFooter className="flex justify-center border-t border-border pt-6 pb-8">
           <p className="text-sm text-muted-foreground">
-            Don't have an account? <Link href="/register" className="text-primary font-medium hover:text-accent transition-colors">Register here</Link>
+            Don't have an account?{" "}
+            <Link
+              href={`/register${redirectTo !== "/" ? `?redirect=${encodeURIComponent(redirectTo)}` : ""}`}
+              className="text-primary font-medium hover:text-accent transition-colors"
+            >
+              Register here
+            </Link>
           </p>
         </CardFooter>
       </Card>

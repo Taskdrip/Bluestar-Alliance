@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useSearch } from "wouter";
+import { useSearch, useLocation } from "wouter";
 import { CheckCircle2, UploadCloud, CreditCard, Copy, AlertCircle, FileText, X, LogIn, UserPlus, Clock } from "lucide-react";
 
 // ─── Industry taxonomy ───────────────────────────────────────────────────────
@@ -489,6 +489,26 @@ export default function Apply() {
   // Industry / sub-role selection state
   const [selectedIndustry, setSelectedIndustry] = useState(urlIndustry);
 
+  // Scroll refs for seamless UX
+  const formSectionRef = useRef<HTMLDivElement>(null);
+  const [, setLocation] = useLocation();
+
+  // Scroll to the application form when auth completes
+  useEffect(() => {
+    if (isAuthenticated && formSectionRef.current) {
+      setTimeout(() => {
+        formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
+  }, [isAuthenticated]);
+
+  // Scroll to top when transitioning to success / result screens
+  useEffect(() => {
+    if (isSuccess || isPayLaterSuccess) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [isSuccess, isPayLaterSuccess]);
+
   // CV upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [cvFile, setCvFile] = useState<File | null>(null);
@@ -710,7 +730,7 @@ export default function Apply() {
                 <li>Your add-on services will be activated upon payment confirmation.</li>
               </ul>
             </div>
-            <Button onClick={() => window.location.href = '/'} variant="outline" className="min-w-[200px]">
+            <Button onClick={() => setLocation("/")} variant="outline" className="min-w-[200px]">
               Return to Homepage
             </Button>
           </CardContent>
@@ -731,7 +751,7 @@ export default function Apply() {
             <p className="text-lg text-muted-foreground mb-8 leading-relaxed max-w-xl mx-auto">
               Your application has been successfully submitted. With over 18 years of recruitment excellence, our HR team carefully reviews every application and will contact shortlisted candidates.
             </p>
-            <Button onClick={() => window.location.href = '/'} variant="outline" className="min-w-[200px]">
+            <Button onClick={() => setLocation("/")} variant="outline" className="min-w-[200px]">
               Return to Homepage
             </Button>
           </CardContent>
@@ -754,7 +774,7 @@ export default function Apply() {
                 Your application and add-on order have been received. Our team will confirm your bank transfer within 1–2 business days.
               </p>
               <p className="text-sm text-muted-foreground mb-8">Your documents will be processed within <strong>15 business days</strong> of payment confirmation.</p>
-              <Button onClick={() => window.location.href = '/'} variant="outline" className="min-w-[200px]">
+              <Button onClick={() => setLocation("/")} variant="outline" className="min-w-[200px]">
                 Return to Homepage
               </Button>
             </CardContent>
@@ -898,7 +918,7 @@ export default function Apply() {
           </div>
         ) : (
           /* ── Application form ── */
-          <Card className="border-border shadow-md rounded-sm">
+          <Card ref={formSectionRef} className="border-border shadow-md rounded-sm">
             <CardHeader className="border-b border-border bg-muted/30 pb-6">
               <CardTitle className="font-serif text-2xl text-primary">Candidate Profile</CardTitle>
               <CardDescription>Please provide accurate details for our recruitment team.</CardDescription>
