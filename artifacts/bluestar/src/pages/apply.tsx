@@ -19,7 +19,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useSearch } from "wouter";
 import { CheckCircle2, UploadCloud, CreditCard, Copy, AlertCircle, FileText, X, LogIn, UserPlus, Clock } from "lucide-react";
 
 // ─── Industry taxonomy ───────────────────────────────────────────────────────
@@ -479,8 +480,14 @@ export default function Apply() {
   const [addonOrderLoading, setAddonOrderLoading] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
+  // Read URL search params to pre-select industry + role from homepage links
+  const searchStr = useSearch();
+  const urlParams = new URLSearchParams(searchStr);
+  const urlIndustry = urlParams.get("industry") ?? "";
+  const urlRole = urlParams.get("role") ?? "";
+
   // Industry / sub-role selection state
-  const [selectedIndustry, setSelectedIndustry] = useState("");
+  const [selectedIndustry, setSelectedIndustry] = useState(urlIndustry);
 
   // CV upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -504,6 +511,13 @@ export default function Apply() {
       coverLetter: "",
     },
   });
+
+  // Pre-fill industry + role from URL params (e.g. /apply?industry=Oil+%26+Gas&role=Drilling+Engineer)
+  useEffect(() => {
+    if (urlIndustry) setSelectedIndustry(urlIndustry);
+    if (urlRole) form.setValue("position", urlRole, { shouldValidate: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Pre-fill name & email once the user is authenticated
   useEffect(() => {

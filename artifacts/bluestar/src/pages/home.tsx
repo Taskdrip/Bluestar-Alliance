@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
-import { ShieldCheck, Globe2, Briefcase, Award, CheckCircle2, Star, HardHat, Building2, Zap, Anchor, Flame, Cog, UtensilsCrossed, ShoppingBag, TrendingUp, GraduationCap } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { ShieldCheck, Globe2, Briefcase, Award, CheckCircle2, Star, HardHat, Building2, Zap, Anchor, Flame, Cog, UtensilsCrossed, ShoppingBag, TrendingUp, GraduationCap, ChevronDown, X, ArrowRight } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import hero1 from "@/assets/hero-1.png";
 import hero2 from "@/assets/hero-2.png";
 import hero3 from "@/assets/hero-3.png";
@@ -46,10 +46,129 @@ const industries = [
   { name: "Education", icon: GraduationCap },
 ];
 
+// Maps each homepage industry to sub-roles (with the INDUSTRIES key used in apply.tsx)
+const INDUSTRY_SUBROLES: Record<string, Array<{ role: string; industryKey: string }>> = {
+  "Mining": [
+    { role: "Mining Engineer", industryKey: "Engineering" },
+    { role: "Geotechnical Engineer", industryKey: "Engineering" },
+    { role: "Petroleum Engineer", industryKey: "Engineering" },
+    { role: "Boilermaker", industryKey: "Manufacturing & Trades" },
+    { role: "Welder (MIG / TIG / SMAW)", industryKey: "Manufacturing & Trades" },
+    { role: "Fitter & Turner", industryKey: "Manufacturing & Trades" },
+    { role: "Quality Control Inspector", industryKey: "Manufacturing & Trades" },
+    { role: "HSE / Safety Officer", industryKey: "Construction" },
+    { role: "Production Operator", industryKey: "Manufacturing & Trades" },
+    { role: "Crane Operator", industryKey: "Construction" },
+  ],
+  "Construction": [
+    { role: "Site Manager", industryKey: "Construction" },
+    { role: "Construction Project Manager", industryKey: "Construction" },
+    { role: "HSE / Safety Officer", industryKey: "Construction" },
+    { role: "Site Foreman", industryKey: "Construction" },
+    { role: "Quantity Surveyor", industryKey: "Construction" },
+    { role: "Building Inspector", industryKey: "Construction" },
+    { role: "Scaffolder", industryKey: "Construction" },
+    { role: "Crane Operator", industryKey: "Construction" },
+    { role: "Heavy Equipment Operator", industryKey: "Construction" },
+    { role: "Carpenter / Joiner", industryKey: "Construction" },
+    { role: "Concrete Finisher", industryKey: "Construction" },
+    { role: "Rebar / Steel Fixer", industryKey: "Construction" },
+  ],
+  "Electrical": [
+    { role: "Electrical Engineer", industryKey: "Engineering" },
+    { role: "Instrumentation Engineer", industryKey: "Engineering" },
+    { role: "Electrician (Industrial)", industryKey: "Manufacturing & Trades" },
+    { role: "HVAC Technician", industryKey: "Manufacturing & Trades" },
+    { role: "Instrument Technician", industryKey: "Oil & Gas" },
+    { role: "Marine Electrician", industryKey: "Maritime & Shipping" },
+    { role: "Process Engineer", industryKey: "Engineering" },
+    { role: "CNC Machinist", industryKey: "Manufacturing & Trades" },
+  ],
+  "Maritime": [
+    { role: "Ship Crew Member", industryKey: "Maritime & Shipping" },
+    { role: "Deck Officer (1st / 2nd / 3rd Mate)", industryKey: "Maritime & Shipping" },
+    { role: "Captain / Master Mariner", industryKey: "Maritime & Shipping" },
+    { role: "Marine Engineer", industryKey: "Maritime & Shipping" },
+    { role: "Chief Engineer (Marine)", industryKey: "Maritime & Shipping" },
+    { role: "Able Seaman", industryKey: "Maritime & Shipping" },
+    { role: "Bosun", industryKey: "Maritime & Shipping" },
+    { role: "Port Operator", industryKey: "Maritime & Shipping" },
+    { role: "Naval Architect", industryKey: "Maritime & Shipping" },
+    { role: "Marine Electrician", industryKey: "Maritime & Shipping" },
+  ],
+  "Oil & Gas": [
+    { role: "Oil Rig Engineer", industryKey: "Oil & Gas" },
+    { role: "Drilling Engineer", industryKey: "Oil & Gas" },
+    { role: "Petroleum Engineer", industryKey: "Oil & Gas" },
+    { role: "Pipeline Technician", industryKey: "Oil & Gas" },
+    { role: "HSE Officer (Oil & Gas)", industryKey: "Oil & Gas" },
+    { role: "Process Operator", industryKey: "Oil & Gas" },
+    { role: "Instrument Technician", industryKey: "Oil & Gas" },
+    { role: "Subsea Engineer", industryKey: "Oil & Gas" },
+    { role: "Wellsite Geologist", industryKey: "Oil & Gas" },
+    { role: "Production Supervisor", industryKey: "Oil & Gas" },
+  ],
+  "Heavy Machinery": [
+    { role: "Heavy Equipment Operator", industryKey: "Construction" },
+    { role: "Crane Operator", industryKey: "Construction" },
+    { role: "Mechanical Engineer", industryKey: "Engineering" },
+    { role: "CNC Machinist", industryKey: "Manufacturing & Trades" },
+    { role: "Fitter & Turner", industryKey: "Manufacturing & Trades" },
+    { role: "Industrial Mechanic", industryKey: "Manufacturing & Trades" },
+    { role: "Tool & Die Maker", industryKey: "Manufacturing & Trades" },
+    { role: "Boilermaker", industryKey: "Manufacturing & Trades" },
+    { role: "Fleet Manager", industryKey: "Logistics & Supply Chain" },
+    { role: "Production Operator", industryKey: "Manufacturing & Trades" },
+  ],
+  "Hospitality": [
+    { role: "Hospitality Manager", industryKey: "Hospitality & Tourism" },
+    { role: "Hotel General Manager", industryKey: "Hospitality & Tourism" },
+    { role: "Executive Chef", industryKey: "Hospitality & Tourism" },
+    { role: "Sous Chef", industryKey: "Hospitality & Tourism" },
+    { role: "Restaurant Manager", industryKey: "Hospitality & Tourism" },
+    { role: "Front Desk / Receptionist", industryKey: "Hospitality & Tourism" },
+    { role: "Housekeeping Supervisor", industryKey: "Hospitality & Tourism" },
+    { role: "Event Coordinator", industryKey: "Hospitality & Tourism" },
+    { role: "Travel Consultant", industryKey: "Hospitality & Tourism" },
+    { role: "Food & Beverage Manager", industryKey: "Hospitality & Tourism" },
+    { role: "Bartender / Mixologist", industryKey: "Hospitality & Tourism" },
+    { role: "Tour Guide", industryKey: "Hospitality & Tourism" },
+  ],
+  "Retail": [
+    { role: "Retail Supervisor", industryKey: "Retail & Commerce" },
+    { role: "Store Manager", industryKey: "Retail & Commerce" },
+    { role: "Sales Representative", industryKey: "Retail & Commerce" },
+    { role: "Merchandiser", industryKey: "Retail & Commerce" },
+    { role: "Customer Service Manager", industryKey: "Retail & Commerce" },
+    { role: "E-commerce Specialist", industryKey: "Retail & Commerce" },
+    { role: "Procurement Officer", industryKey: "Retail & Commerce" },
+    { role: "Business Development Manager", industryKey: "Retail & Commerce" },
+  ],
+  "Marketing": [
+    { role: "Business Development Manager", industryKey: "Retail & Commerce" },
+    { role: "Sales Representative", industryKey: "Retail & Commerce" },
+    { role: "E-commerce Specialist", industryKey: "Retail & Commerce" },
+    { role: "Merchandiser", industryKey: "Retail & Commerce" },
+    { role: "Customer Service Manager", industryKey: "Retail & Commerce" },
+    { role: "Administrative Officer", industryKey: "Other / General" },
+    { role: "Human Resources Manager", industryKey: "Other / General" },
+  ],
+  "Education": [
+    { role: "Primary School Teacher", industryKey: "Education" },
+    { role: "Secondary School Teacher", industryKey: "Education" },
+    { role: "University / College Lecturer", industryKey: "Education" },
+    { role: "Special Education Teacher", industryKey: "Education" },
+    { role: "School Administrator", industryKey: "Education" },
+    { role: "ESL / EFL Teacher", industryKey: "Education" },
+  ],
+};
+
 const photoGallery = [img1, img2, img3, img4, img5, img6, img7, img8];
 
 export default function Home() {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
+  const [expandedIndustry, setExpandedIndustry] = useState<string | null>(null);
+  const [, navigate] = useLocation();
 
   useEffect(() => {
     if (emblaApi) {
@@ -408,19 +527,69 @@ export default function Home() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-5">
             {industries.map((ind, i) => {
               const Icon = ind.icon;
+              const isExpanded = expandedIndustry === ind.name;
               return (
-                <div
+                <button
                   key={i}
-                  className="group flex flex-col items-center justify-center gap-3 p-6 rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm hover:bg-accent/20 hover:border-accent/50 transition-all duration-300 cursor-default"
+                  onClick={() => setExpandedIndustry(isExpanded ? null : ind.name)}
+                  className={`group flex flex-col items-center justify-center gap-3 p-6 rounded-lg border transition-all duration-300 cursor-pointer text-left w-full ${
+                    isExpanded
+                      ? "bg-accent/30 border-accent/70 ring-2 ring-accent/40"
+                      : "border-white/10 bg-white/5 backdrop-blur-sm hover:bg-accent/20 hover:border-accent/50"
+                  }`}
                 >
-                  <div className="w-12 h-12 rounded-full bg-accent/15 border border-accent/30 flex items-center justify-center group-hover:bg-accent/30 group-hover:scale-110 transition-all duration-300">
+                  <div className={`w-12 h-12 rounded-full border flex items-center justify-center transition-all duration-300 ${
+                    isExpanded
+                      ? "bg-accent/40 border-accent scale-110"
+                      : "bg-accent/15 border-accent/30 group-hover:bg-accent/30 group-hover:scale-110"
+                  }`}>
                     <Icon className="w-5 h-5 text-accent" />
                   </div>
                   <span className="font-semibold text-white text-sm tracking-wide text-center leading-snug">{ind.name}</span>
-                </div>
+                  <ChevronDown className={`w-4 h-4 text-accent/70 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`} />
+                </button>
               );
             })}
           </div>
+
+          {/* Sub-roles expansion panel */}
+          {expandedIndustry && INDUSTRY_SUBROLES[expandedIndustry] && (
+            <div className="mt-6 rounded-xl border border-accent/30 bg-black/60 backdrop-blur-md p-6 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="text-white font-serif text-xl font-bold">{expandedIndustry}</h3>
+                  <p className="text-white/60 text-sm mt-0.5">Select a role to apply directly</p>
+                </div>
+                <button
+                  onClick={() => setExpandedIndustry(null)}
+                  className="text-white/50 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                {INDUSTRY_SUBROLES[expandedIndustry].map(({ role, industryKey }) => (
+                  <button
+                    key={role}
+                    onClick={() => navigate(`/apply?industry=${encodeURIComponent(industryKey)}&role=${encodeURIComponent(role)}`)}
+                    className="flex items-center justify-between gap-2 px-4 py-3 rounded-lg bg-white/5 border border-white/10 hover:bg-accent/20 hover:border-accent/50 transition-all duration-200 text-left group"
+                  >
+                    <span className="text-white/85 text-sm font-medium group-hover:text-white transition-colors leading-snug">{role}</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-accent/60 group-hover:text-accent flex-shrink-0 transition-colors" />
+                  </button>
+                ))}
+              </div>
+              <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between">
+                <p className="text-white/50 text-xs">Don't see your role? You can specify it in the application form.</p>
+                <Link
+                  href="/apply"
+                  className="text-accent text-sm font-semibold hover:text-accent/80 transition-colors flex items-center gap-1"
+                >
+                  Browse all roles <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </div>
