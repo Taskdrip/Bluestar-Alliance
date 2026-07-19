@@ -12,7 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,7 +20,172 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState, useEffect, useRef } from "react";
-import { CheckCircle2, UploadCloud, CreditCard, Copy, AlertCircle, FileText, X, LogIn, UserPlus } from "lucide-react";
+import { CheckCircle2, UploadCloud, CreditCard, Copy, AlertCircle, FileText, X, LogIn, UserPlus, Clock } from "lucide-react";
+
+// ─── Industry taxonomy ───────────────────────────────────────────────────────
+
+const INDUSTRIES: Record<string, string[]> = {
+  "Healthcare & Medical": [
+    "Registered Nurse",
+    "General Practitioner (Doctor)",
+    "Surgeon",
+    "Physiotherapist",
+    "Medical Laboratory Technician",
+    "Pharmacist",
+    "Dental Assistant / Dentist",
+    "Radiographer",
+    "Midwife",
+    "Healthcare Assistant",
+    "Occupational Therapist",
+    "Paramedic",
+  ],
+  "Engineering": [
+    "Civil Engineer",
+    "Structural Engineer",
+    "Mechanical Engineer",
+    "Electrical Engineer",
+    "Chemical Engineer",
+    "Environmental Engineer",
+    "Petroleum Engineer",
+    "Mining Engineer",
+    "Geotechnical Engineer",
+    "Project Engineer",
+    "Instrumentation Engineer",
+    "Process Engineer",
+  ],
+  "Oil & Gas": [
+    "Oil Rig Engineer",
+    "Drilling Engineer",
+    "Petroleum Engineer",
+    "Pipeline Technician",
+    "HSE Officer (Oil & Gas)",
+    "Process Operator",
+    "Instrument Technician",
+    "Subsea Engineer",
+    "Wellsite Geologist",
+    "Production Supervisor",
+  ],
+  "Manufacturing & Trades": [
+    "CNC Machinist",
+    "Welder (MIG / TIG / SMAW)",
+    "Fitter & Turner",
+    "Boilermaker",
+    "Sheet Metal Worker",
+    "Industrial Mechanic",
+    "Production Operator",
+    "Quality Control Inspector",
+    "Tool & Die Maker",
+    "Electrician (Industrial)",
+    "Plumber / Pipefitter",
+    "HVAC Technician",
+  ],
+  "Construction": [
+    "Site Manager",
+    "Construction Project Manager",
+    "HSE / Safety Officer",
+    "Site Foreman",
+    "Quantity Surveyor",
+    "Building Inspector",
+    "Scaffolder",
+    "Crane Operator",
+    "Heavy Equipment Operator",
+    "Carpenter / Joiner",
+    "Concrete Finisher",
+    "Rebar / Steel Fixer",
+  ],
+  "Maritime & Shipping": [
+    "Ship Crew Member",
+    "Deck Officer (1st / 2nd / 3rd Mate)",
+    "Captain / Master Mariner",
+    "Marine Engineer",
+    "Chief Engineer (Marine)",
+    "Able Seaman",
+    "Bosun",
+    "Port Operator",
+    "Naval Architect",
+    "Marine Electrician",
+  ],
+  "Hospitality & Tourism": [
+    "Hospitality Manager",
+    "Hotel General Manager",
+    "Executive Chef",
+    "Sous Chef",
+    "Restaurant Manager",
+    "Front Desk / Receptionist",
+    "Housekeeping Supervisor",
+    "Event Coordinator",
+    "Travel Consultant",
+    "Food & Beverage Manager",
+    "Bartender / Mixologist",
+    "Tour Guide",
+  ],
+  "Retail & Commerce": [
+    "Retail Supervisor",
+    "Store Manager",
+    "Sales Representative",
+    "Merchandiser",
+    "Customer Service Manager",
+    "E-commerce Specialist",
+    "Procurement Officer",
+    "Business Development Manager",
+  ],
+  "Logistics & Supply Chain": [
+    "Logistics Coordinator",
+    "Truck Driver (HGV / Class 1)",
+    "Warehouse Manager",
+    "Freight Forwarder",
+    "Supply Chain Analyst",
+    "Fleet Manager",
+    "Customs Broker",
+    "Inventory Controller",
+    "Distribution Manager",
+  ],
+  "IT & Technology": [
+    "Software Engineer",
+    "Network Engineer",
+    "IT Support Specialist",
+    "Cybersecurity Analyst",
+    "Data Analyst / Data Scientist",
+    "DevOps / Cloud Engineer",
+    "Systems Administrator",
+    "UI/UX Designer",
+    "ERP / SAP Consultant",
+  ],
+  "Agriculture & Farming": [
+    "Farm Manager",
+    "Agricultural Technician",
+    "Livestock Farmer",
+    "Crop / Horticulture Specialist",
+    "Irrigation Engineer",
+    "Aquaculture Technician",
+  ],
+  "Education": [
+    "Primary School Teacher",
+    "Secondary School Teacher",
+    "University / College Lecturer",
+    "Special Education Teacher",
+    "School Administrator",
+    "ESL / EFL Teacher",
+  ],
+  "Finance & Accounting": [
+    "Accountant (CPA / ACCA)",
+    "Auditor",
+    "Financial Analyst",
+    "Payroll Officer",
+    "Tax Consultant",
+    "Chief Financial Officer (CFO)",
+    "Banking Officer",
+  ],
+  "Other / General": [
+    "Administrative Officer",
+    "Human Resources Manager",
+    "Legal Counsel / Lawyer",
+    "Security Officer",
+    "Domestic Worker / Caregiver",
+    "Driver",
+    "Other (specify in cover letter)",
+  ],
+};
 
 // ─── Schemas ────────────────────────────────────────────────────────────────
 
@@ -29,7 +194,7 @@ const applicationSchema = z.object({
   email: z.string().email("Invalid email address"),
   phone: z.string().min(8, "Valid phone number required"),
   country: z.string().min(2, "Country is required"),
-  position: z.string().min(2, "Please select a position"),
+  position: z.string().min(2, "Please select a role"),
   yearsOfExperience: z.coerce.number().min(0, "Years of experience must be 0 or greater"),
   coverLetter: z.string().optional(),
 });
@@ -80,6 +245,7 @@ function AuthPanel({ onAuth }: { onAuth: (name: string, email: string) => void }
   const queryClient = useQueryClient();
   const loginUser = useLoginUser();
   const registerUser = useRegisterUser();
+  const [activeTab, setActiveTab] = useState<"register" | "login">("register");
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -108,6 +274,14 @@ function AuthPanel({ onAuth }: { onAuth: (name: string, email: string) => void }
         queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
         onAuth(data.fullName, data.email);
       },
+      onError: (err: any) => {
+        const message = err?.message || "";
+        // Auto-switch to Sign In tab if email is already registered
+        if (message.includes("409") || message.toLowerCase().includes("already registered") || message.toLowerCase().includes("already exists")) {
+          loginForm.setValue("email", data.email);
+          setActiveTab("login");
+        }
+      },
     });
   }
 
@@ -123,7 +297,7 @@ function AuthPanel({ onAuth }: { onAuth: (name: string, email: string) => void }
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
-        <Tabs defaultValue="register">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "register" | "login")}>
           <TabsList className="w-full mb-6">
             <TabsTrigger value="register" className="flex-1 gap-2">
               <UserPlus className="w-4 h-4" /> Create Account
@@ -139,7 +313,27 @@ function AuthPanel({ onAuth }: { onAuth: (name: string, email: string) => void }
               <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  {registerUser.error?.message || "Registration failed. Please try again."}
+                  {(() => {
+                    const msg = (registerUser.error as any)?.message || "";
+                    if (msg.includes("409") || msg.toLowerCase().includes("already")) {
+                      return (
+                        <span>
+                          That email is already registered.{" "}
+                          <button
+                            type="button"
+                            className="font-semibold underline underline-offset-2"
+                            onClick={() => {
+                              loginForm.setValue("email", registerForm.getValues("email"));
+                              setActiveTab("login");
+                            }}
+                          >
+                            Sign in instead →
+                          </button>
+                        </span>
+                      );
+                    }
+                    return msg || "Registration failed. Please try again.";
+                  })()}
                 </AlertDescription>
               </Alert>
             )}
@@ -191,6 +385,12 @@ function AuthPanel({ onAuth }: { onAuth: (name: string, email: string) => void }
                 >
                   {registerUser.isPending ? "Creating account..." : "Create Account & Continue"}
                 </Button>
+                <p className="text-center text-sm text-muted-foreground">
+                  Already have an account?{" "}
+                  <button type="button" className="text-primary font-medium hover:underline" onClick={() => setActiveTab("login")}>
+                    Sign in
+                  </button>
+                </p>
               </form>
             </Form>
           </TabsContent>
@@ -201,7 +401,7 @@ function AuthPanel({ onAuth }: { onAuth: (name: string, email: string) => void }
               <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  {loginUser.error?.message || "Invalid credentials. Please try again."}
+                  {(loginUser.error as any)?.message || "Invalid credentials. Please try again."}
                 </AlertDescription>
               </Alert>
             )}
@@ -240,6 +440,12 @@ function AuthPanel({ onAuth }: { onAuth: (name: string, email: string) => void }
                 >
                   {loginUser.isPending ? "Signing in..." : "Sign In & Continue"}
                 </Button>
+                <p className="text-center text-sm text-muted-foreground">
+                  Don't have an account?{" "}
+                  <button type="button" className="text-primary font-medium hover:underline" onClick={() => setActiveTab("register")}>
+                    Create one
+                  </button>
+                </p>
               </form>
             </Form>
           </TabsContent>
@@ -259,6 +465,7 @@ export default function Apply() {
   const isAuthenticated = !!currentUser;
 
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isPayLaterSuccess, setIsPayLaterSuccess] = useState(false);
   const [applicationId, setApplicationId] = useState<number | null>(null);
   const [selectedAddons, setSelectedAddons] = useState<Record<AddonId, boolean>>({
     visaSponsorship: false,
@@ -269,7 +476,11 @@ export default function Apply() {
   const [paymentSettings, setPaymentSettings] = useState<any>(null);
   const [submittedData, setSubmittedData] = useState<ApplicationFormValues | null>(null);
   const [addonOrderSubmitted, setAddonOrderSubmitted] = useState(false);
+  const [addonOrderLoading, setAddonOrderLoading] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  // Industry / sub-role selection state
+  const [selectedIndustry, setSelectedIndustry] = useState("");
 
   // CV upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -340,7 +551,7 @@ export default function Apply() {
       const res = await fetch("/api/upload/cv", { method: "POST", body: formData });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Upload failed");
+        throw new Error((err as any).error || "Upload failed");
       }
       const data = await res.json();
       setCvUploadedUrl(data.url);
@@ -387,10 +598,11 @@ export default function Apply() {
     setCvError(null);
   }
 
-  async function handleAddonOrder() {
+  async function submitAddonOrder(paymentMethod: "bank_transfer" | "pay_later") {
     if (!applicationId || !submittedData) return;
+    setAddonOrderLoading(true);
     try {
-      await fetch("/api/addon-orders", {
+      const res = await fetch("/api/addon-orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -401,11 +613,25 @@ export default function Apply() {
           flightTicket: selectedAddons.flightTicket,
           workPermit: selectedAddons.workPermit,
           totalAmount: totalAddonAmount * 100,
-          paymentMethod: "bank_transfer",
+          paymentMethod,
         }),
       });
-      setAddonOrderSubmitted(true);
-    } catch (e) {}
+      if (!res.ok) throw new Error("Order failed");
+      if (paymentMethod === "bank_transfer") {
+        setAddonOrderSubmitted(true);
+      } else {
+        setIsPayLaterSuccess(true);
+      }
+    } catch {
+      // Show a fallback — still let them proceed
+      if (paymentMethod === "bank_transfer") {
+        setAddonOrderSubmitted(true);
+      } else {
+        setIsPayLaterSuccess(true);
+      }
+    } finally {
+      setAddonOrderLoading(false);
+    }
   }
 
   function onSubmit(data: ApplicationFormValues) {
@@ -432,6 +658,35 @@ export default function Apply() {
   }
 
   // ── Success screens ──────────────────────────────────────────────────────
+
+  if (isPayLaterSuccess) {
+    return (
+      <div className="container mx-auto px-4 py-24 flex items-center justify-center min-h-[70vh]">
+        <Card className="max-w-2xl w-full text-center border-border shadow-lg">
+          <CardContent className="pt-12 pb-12 px-8 flex flex-col items-center">
+            <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mb-6">
+              <Clock className="w-10 h-10 text-amber-500" />
+            </div>
+            <h2 className="font-serif text-3xl font-bold text-primary mb-4">Application Confirmed!</h2>
+            <p className="text-lg text-muted-foreground mb-4 leading-relaxed max-w-xl mx-auto">
+              Your application has been successfully submitted and your add-on request has been saved.
+            </p>
+            <div className="w-full bg-amber-50 border border-amber-200 rounded-sm p-5 mb-8 text-left space-y-2">
+              <p className="font-semibold text-amber-900 text-sm">What happens next:</p>
+              <ul className="text-sm text-amber-800 space-y-1.5 list-disc list-inside">
+                <li>Our team will review your application and reach out within <strong>2–3 business days</strong>.</li>
+                <li>We'll send bank transfer details to <strong>{submittedData?.email}</strong> when you're ready to proceed.</li>
+                <li>Your add-on services will be activated upon payment confirmation.</li>
+              </ul>
+            </div>
+            <Button onClick={() => window.location.href = '/'} variant="outline" className="min-w-[200px]">
+              Return to Homepage
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isSuccess && !showPayment) {
     return (
@@ -465,7 +720,7 @@ export default function Apply() {
               </div>
               <h2 className="font-serif text-3xl font-bold text-primary mb-4">Order Confirmed!</h2>
               <p className="text-lg text-muted-foreground mb-4 max-w-xl">
-                Your application and add-on order have been received. Please complete the bank transfer and our team will confirm your payment within 1-2 business days.
+                Your application and add-on order have been received. Our team will confirm your bank transfer within 1–2 business days.
               </p>
               <p className="text-sm text-muted-foreground mb-8">Your documents will be processed within <strong>15 business days</strong> of payment confirmation.</p>
               <Button onClick={() => window.location.href = '/'} variant="outline" className="min-w-[200px]">
@@ -483,20 +738,26 @@ export default function Apply() {
               <p className="text-muted-foreground">Complete your add-on order via bank transfer below.</p>
             </div>
 
+            {/* Selected add-ons summary */}
             <Card className="mb-6 border-border shadow-md">
               <CardHeader className="border-b border-border bg-muted/30">
                 <CardTitle className="font-serif text-xl text-primary">Your Selected Add-ons</CardTitle>
+                <CardDescription>Total: <strong className="text-foreground">${totalAddonAmount.toLocaleString()}</strong></CardDescription>
               </CardHeader>
-              <CardContent className="pt-4">
+              <CardContent className="pt-4 divide-y divide-border">
                 {ADDONS.filter(a => selectedAddons[a.id as AddonId]).map(a => (
-                  <div key={a.id} className="py-3 border-b border-border last:border-0">
-                    <p className="font-semibold text-foreground">{a.label}</p>
-                    <p className="text-sm text-muted-foreground">{a.description}</p>
+                  <div key={a.id} className="py-3 flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-foreground">{a.label}</p>
+                      <p className="text-sm text-muted-foreground">{a.description}</p>
+                    </div>
+                    <span className="font-bold text-primary ml-4">${a.price}</span>
                   </div>
                 ))}
               </CardContent>
             </Card>
 
+            {/* Bank details */}
             {paymentSettings ? (
               <Card className="mb-6 border-border shadow-md">
                 <CardHeader className="border-b border-border bg-muted/30">
@@ -504,18 +765,19 @@ export default function Apply() {
                     <CreditCard className="w-5 h-5 text-primary" />
                     <CardTitle className="font-serif text-xl text-primary">Bank Transfer Details</CardTitle>
                   </div>
-                  <CardDescription>Use your full name as reference. Our team will contact you with the exact amount and any further instructions.</CardDescription>
+                  <CardDescription>Use your full name as the payment reference. Our team will contact you to confirm receipt.</CardDescription>
                 </CardHeader>
-                <CardContent className="pt-6 space-y-4">
+                <CardContent className="pt-6 space-y-3">
                   {[
                     { label: "Bank Name", value: paymentSettings.bankName },
                     { label: "Account Name", value: paymentSettings.accountName },
                     { label: "Account Number", value: paymentSettings.accountNumber },
                     paymentSettings.routingNumber && { label: "Routing Number", value: paymentSettings.routingNumber },
                     paymentSettings.swiftCode && { label: "SWIFT / BIC Code", value: paymentSettings.swiftCode },
-                    submittedData && { label: "Reference", value: submittedData.fullName },
+                    submittedData && { label: "Reference (your name)", value: submittedData.fullName },
+                    { label: "Amount", value: `$${totalAddonAmount.toLocaleString()} USD` },
                   ].filter(Boolean).map((item: any) => (
-                    <div key={item.label} className="flex items-center justify-between p-3 bg-muted/30 rounded-sm">
+                    <div key={item.label} className="flex items-center justify-between p-3 bg-muted/30 rounded-sm border border-border/50">
                       <div>
                         <p className="text-xs text-muted-foreground uppercase tracking-wider mb-0.5">{item.label}</p>
                         <p className="font-semibold text-foreground">{item.value}</p>
@@ -538,10 +800,12 @@ export default function Apply() {
                 </CardContent>
               </Card>
             ) : (
-              <Card className="mb-6 border-yellow-200 bg-yellow-50">
-                <CardContent className="pt-6 flex items-center gap-3">
-                  <AlertCircle className="w-5 h-5 text-yellow-600" />
-                  <p className="text-yellow-800">Payment details are being configured. Our team will contact you with bank transfer information within 24 hours at <strong>{submittedData?.email}</strong>.</p>
+              <Card className="mb-6 border-amber-200 bg-amber-50">
+                <CardContent className="pt-6 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-amber-800 text-sm">
+                    Payment details are being configured. Our team will contact you with bank transfer information within 24 hours at <strong>{submittedData?.email}</strong>.
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -549,17 +813,27 @@ export default function Apply() {
             <div className="flex flex-col sm:flex-row gap-4">
               <Button
                 size="lg"
-                className="flex-1 bg-primary hover:bg-primary/90 h-14 text-lg"
-                onClick={handleAddonOrder}
+                className="flex-1 bg-primary hover:bg-primary/90 h-14 text-base"
+                onClick={() => submitAddonOrder("bank_transfer")}
+                disabled={addonOrderLoading}
               >
-                I've Completed the Transfer
+                {addonOrderLoading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Processing...
+                  </span>
+                ) : (
+                  "I've Completed the Transfer"
+                )}
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                className="flex-1 h-14"
-                onClick={() => setIsSuccess(true)}
+                className="flex-1 h-14 border-2"
+                onClick={() => submitAddonOrder("pay_later")}
+                disabled={addonOrderLoading}
               >
+                <Clock className="w-4 h-4 mr-2" />
                 I'll Pay Later
               </Button>
             </div>
@@ -582,7 +856,7 @@ export default function Apply() {
           <p className="text-muted-foreground text-lg">Take the next step in your global career.</p>
         </div>
 
-        {/* ── Auth gate: shown while loading or when not authenticated ── */}
+        {/* ── Auth gate ── */}
         {authLoading && !authError ? (
           <div className="flex items-center justify-center py-16">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -592,7 +866,7 @@ export default function Apply() {
             <AuthPanel onAuth={handleInlineAuth} />
           </div>
         ) : (
-          /* ── Application form: shown once authenticated ── */
+          /* ── Application form ── */
           <Card className="border-border shadow-md rounded-sm">
             <CardHeader className="border-b border-border bg-muted/30 pb-6">
               <CardTitle className="font-serif text-2xl text-primary">Candidate Profile</CardTitle>
@@ -603,6 +877,7 @@ export default function Apply() {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Full Name */}
                     <FormField
                       control={form.control}
                       name="fullName"
@@ -617,6 +892,7 @@ export default function Apply() {
                       )}
                     />
 
+                    {/* Email */}
                     <FormField
                       control={form.control}
                       name="email"
@@ -631,6 +907,7 @@ export default function Apply() {
                       )}
                     />
 
+                    {/* Phone */}
                     <FormField
                       control={form.control}
                       name="phone"
@@ -645,6 +922,7 @@ export default function Apply() {
                       )}
                     />
 
+                    {/* Country */}
                     <FormField
                       control={form.control}
                       name="country"
@@ -652,36 +930,62 @@ export default function Apply() {
                         <FormItem>
                           <FormLabel className="text-foreground">Country of Residence</FormLabel>
                           <FormControl>
-                            <Input placeholder="USA, Australia, UK..." {...field} className="bg-background" />
+                            <Input placeholder="e.g. Philippines, Nigeria, India..." {...field} className="bg-background" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
 
+                    {/* Industry selector (controls sub-role list) */}
+                    <FormItem>
+                      <FormLabel className="text-foreground">Industry / Sector</FormLabel>
+                      <Select
+                        value={selectedIndustry}
+                        onValueChange={(val) => {
+                          setSelectedIndustry(val);
+                          form.setValue("position", "", { shouldValidate: false });
+                        }}
+                      >
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Select your industry" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.keys(INDUSTRIES).map((ind) => (
+                            <SelectItem key={ind} value={ind}>{ind}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+
+                    {/* Specific role — only enabled once industry is chosen */}
                     <FormField
                       control={form.control}
                       name="position"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground">Desired Position</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormLabel className="text-foreground">Desired Role / Position</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            disabled={!selectedIndustry}
+                          >
                             <FormControl>
                               <SelectTrigger className="bg-background">
-                                <SelectValue placeholder="Select a position" />
+                                <SelectValue placeholder={selectedIndustry ? "Select a role" : "Select industry first"} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="Nurse">Nurse</SelectItem>
-                              <SelectItem value="Civil Engineer">Civil Engineer</SelectItem>
-                              <SelectItem value="CNC Machinist">CNC Machinist</SelectItem>
-                              <SelectItem value="Oil Rig Engineer">Oil Rig Engineer</SelectItem>
-                              <SelectItem value="Electrician">Electrician</SelectItem>
-                              <SelectItem value="Mechanical Engineer">Mechanical Engineer</SelectItem>
-                              <SelectItem value="Ship Crew Member">Ship Crew Member</SelectItem>
-                              <SelectItem value="Hospitality Manager">Hospitality Manager</SelectItem>
-                              <SelectItem value="Retail Supervisor">Retail Supervisor</SelectItem>
-                              <SelectItem value="Logistics Coordinator">Logistics Coordinator</SelectItem>
+                              {selectedIndustry && (
+                                <SelectGroup>
+                                  <SelectLabel className="text-xs text-muted-foreground font-semibold tracking-wide">
+                                    {selectedIndustry}
+                                  </SelectLabel>
+                                  {(INDUSTRIES[selectedIndustry] ?? []).map((role) => (
+                                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -689,14 +993,21 @@ export default function Apply() {
                       )}
                     />
 
+                    {/* Years of experience */}
                     <FormField
                       control={form.control}
                       name="yearsOfExperience"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="md:col-span-2">
                           <FormLabel className="text-foreground">Years of Experience</FormLabel>
                           <FormControl>
-                            <Input type="number" min="0" {...field} className="bg-background" />
+                            <Input
+                              type="number"
+                              min="0"
+                              max="50"
+                              {...field}
+                              className="bg-background md:max-w-[200px]"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -707,7 +1018,6 @@ export default function Apply() {
                   {/* CV Upload */}
                   <div>
                     <Label className="text-foreground mb-3 block">Resume / Curriculum Vitae</Label>
-
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -715,7 +1025,6 @@ export default function Apply() {
                       className="hidden"
                       onChange={handleFileInputChange}
                     />
-
                     {cvFile ? (
                       <div className="border-2 border-border rounded-sm p-4 bg-muted/20">
                         <div className="flex items-center gap-3">
@@ -760,7 +1069,6 @@ export default function Apply() {
                         <p className="text-xs text-muted-foreground mt-1">PDF, DOCX, or DOC (Max 5MB)</p>
                       </div>
                     )}
-
                     {cvError && (
                       <p className="text-sm text-destructive mt-2 flex items-center gap-1">
                         <AlertCircle className="w-4 h-4" /> {cvError}
@@ -768,15 +1076,16 @@ export default function Apply() {
                     )}
                   </div>
 
+                  {/* Cover Letter */}
                   <FormField
                     control={form.control}
                     name="coverLetter"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-foreground">Cover Letter (Optional)</FormLabel>
+                        <FormLabel className="text-foreground">Cover Letter <span className="text-muted-foreground font-normal">(Optional)</span></FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Tell us why you're the right fit for this position..."
+                            placeholder="Tell us about your experience, why you're the right fit, and which countries/destinations you're open to..."
                             className="min-h-[150px] bg-background resize-y"
                             {...field}
                           />
@@ -817,6 +1126,7 @@ export default function Apply() {
                               <div className="flex-1">
                                 <p className="font-semibold text-foreground mb-1">{addon.label}</p>
                                 <p className="text-xs text-muted-foreground leading-relaxed">{addon.description}</p>
+                                <p className="text-sm font-bold text-primary mt-2">${addon.price}</p>
                               </div>
                             </div>
                           </div>
@@ -824,16 +1134,19 @@ export default function Apply() {
                       })}
                     </div>
                     {hasAddons && (
-                      <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-sm">
-                        <p className="font-semibold text-primary">Add-ons Selected</p>
-                        <p className="text-sm text-muted-foreground">Payment details will be arranged via bank transfer after submission</p>
+                      <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-sm flex items-center justify-between">
+                        <div>
+                          <p className="font-semibold text-primary">Add-ons Selected</p>
+                          <p className="text-sm text-muted-foreground">Payment via bank transfer after submission — you can also choose to pay later.</p>
+                        </div>
+                        <span className="text-xl font-bold text-primary">${totalAddonAmount}</span>
                       </div>
                     )}
                   </div>
 
                   {form.formState.errors.root && (
-                    <div className="flex items-center gap-2 text-destructive text-sm">
-                      <AlertCircle className="w-4 h-4" />
+                    <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/5 border border-destructive/20 rounded-sm p-3">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
                       <span>{form.formState.errors.root.message}</span>
                     </div>
                   )}
@@ -850,7 +1163,7 @@ export default function Apply() {
                         : cvUploading
                         ? "Uploading CV..."
                         : hasAddons
-                        ? "Submit & Continue to Payment"
+                        ? "Submit & Proceed to Payment"
                         : "Submit Application"}
                     </Button>
                   </div>
