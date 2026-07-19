@@ -1,17 +1,48 @@
 {
-  "name": "Bluestar Alliance",
-  "short_name": "Bluestar",
-  "description": "Your global career partner — Bluestar Alliance Company Limited",
+  "name": "Bluestar Alliance Company Limited",
+  "short_name": "Bluestar Alliance",
+  "description": "A premium multinational company and recruitment agency radiating over 18 years of proven trust, global scale, and professional excellence. The foundation for your global career.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#1e3a8a",
+  "orientation": "any",
+  "background_color": "#0f2c6b",
+  "theme_color": "#0f2c6b",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["business", "productivity"],
   "icons": [
+    { "src": "/icons/icon-72x72.png",   "sizes": "72x72",   "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-96x96.png",   "sizes": "96x96",   "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-128x128.png", "sizes": "128x128", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-144x144.png", "sizes": "144x144", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-152x152.png", "sizes": "152x152", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-384x384.png", "sizes": "384x384", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
     {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "name": "Apply Now",
+      "short_name": "Apply",
+      "description": "Submit your professional application",
+      "url": "/apply",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Browse Jobs",
+      "short_name": "Jobs",
+      "description": "View open positions worldwide",
+      "url": "/jobs",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/opengraph.jpg",
+      "type": "image/jpeg",
+      "sizes": "1200x630",
+      "form_factor": "wide"
     }
   ]
 }

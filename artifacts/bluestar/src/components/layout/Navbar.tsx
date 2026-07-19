@@ -39,7 +39,7 @@ export default function Navbar() {
         .catch(() => {});
     };
     fetchNotifs();
-    const interval = setInterval(fetchNotifs, 30000);
+    const interval = setInterval(fetchNotifs, 8000);
     return () => clearInterval(interval);
   }, [user]);
 

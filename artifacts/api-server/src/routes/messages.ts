@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { db, messagesTable, notificationsTable, applicationsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { db, messagesTable, notificationsTable, applicationsTable, pushSubscriptionsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { verifyToken } from "../lib/auth";
+import webpush from "web-push";
 
 const router = Router();
 
@@ -65,6 +66,7 @@ router.post("/:applicationId", async (req, res) => {
   }).returning();
 
   if (senderRole === "admin") {
+    // 1. Store in-app notification for the applicant
     await db.insert(notificationsTable).values({
       recipientEmail: application.email,
       recipientRole: "candidate",
@@ -73,7 +75,55 @@ router.post("/:applicationId", async (req, res) => {
       relatedId: applicationId,
       isRead: false,
     });
+
+    // 2. Send web push notification to ALL of the applicant's subscribed devices
+    if (
+      process.env.VAPID_PUBLIC_KEY &&
+      process.env.VAPID_PRIVATE_KEY &&
+      process.env.VAPID_EMAIL
+    ) {
+      try {
+        webpush.setVapidDetails(
+          `mailto:${process.env.VAPID_EMAIL}`,
+          process.env.VAPID_PUBLIC_KEY,
+          process.env.VAPID_PRIVATE_KEY
+        );
+        const subs = await db
+          .select()
+          .from(pushSubscriptionsTable)
+          .where(eq(pushSubscriptionsTable.userEmail, application.email));
+
+        const pushPayload = JSON.stringify({
+          title: "New Message — Bluestar Alliance",
+          body: content.trim().slice(0, 120),
+          url: "/apply",
+          tag: `message-${applicationId}`,
+        });
+
+        await Promise.allSettled(
+          subs.map((sub) =>
+            webpush
+              .sendNotification(
+                { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+                pushPayload
+              )
+              .catch(async (err: any) => {
+                // Remove expired / revoked subscriptions automatically
+                if (err?.statusCode === 410 || err?.statusCode === 404) {
+                  await db
+                    .delete(pushSubscriptionsTable)
+                    .where(eq(pushSubscriptionsTable.endpoint, sub.endpoint))
+                    .catch(() => {});
+                }
+              })
+          )
+        );
+      } catch (_) {
+        // Push failure is non-fatal — in-app notification still delivered
+      }
+    }
   } else {
+    // Applicant messaged admin — notify admin in-app
     await db.insert(notificationsTable).values({
       recipientEmail: "admin",
       recipientRole: "admin",
