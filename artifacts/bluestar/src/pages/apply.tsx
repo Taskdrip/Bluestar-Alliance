@@ -1,7 +1,14 @@
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSubmitApplication } from "@workspace/api-client-react";
+import {
+  useSubmitApplication,
+  useGetCurrentUser,
+  useLoginUser,
+  useRegisterUser,
+  getGetCurrentUserQueryKey,
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,8 +17,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState, useEffect, useRef } from "react";
-import { CheckCircle2, UploadCloud, CreditCard, Copy, AlertCircle, FileText, X } from "lucide-react";
+import { CheckCircle2, UploadCloud, CreditCard, Copy, AlertCircle, FileText, X, LogIn, UserPlus } from "lucide-react";
+
+// ─── Schemas ────────────────────────────────────────────────────────────────
 
 const applicationSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
@@ -23,7 +34,22 @@ const applicationSchema = z.object({
   coverLetter: z.string().optional(),
 });
 
+const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+const registerSchema = z.object({
+  fullName: z.string().min(2, "Full name must be at least 2 characters"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
 type ApplicationFormValues = z.infer<typeof applicationSchema>;
+type LoginFormValues = z.infer<typeof loginSchema>;
+type RegisterFormValues = z.infer<typeof registerSchema>;
+
+// ─── Add-ons ────────────────────────────────────────────────────────────────
 
 const ADDONS = [
   {
@@ -48,7 +74,190 @@ const ADDONS = [
 
 type AddonId = "visaSponsorship" | "flightTicket" | "workPermit";
 
+// ─── Inline Auth Panel ──────────────────────────────────────────────────────
+
+function AuthPanel({ onAuth }: { onAuth: (name: string, email: string) => void }) {
+  const queryClient = useQueryClient();
+  const loginUser = useLoginUser();
+  const registerUser = useRegisterUser();
+
+  const loginForm = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  });
+
+  const registerForm = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { fullName: "", email: "", password: "" },
+  });
+
+  function handleLoginSubmit(data: LoginFormValues) {
+    loginUser.mutate({ data }, {
+      onSuccess: (res) => {
+        localStorage.setItem("bluestar_token", res.token);
+        queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+        onAuth("", data.email);
+      },
+    });
+  }
+
+  function handleRegisterSubmit(data: RegisterFormValues) {
+    registerUser.mutate({ data }, {
+      onSuccess: (res) => {
+        localStorage.setItem("bluestar_token", res.token);
+        queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+        onAuth(data.fullName, data.email);
+      },
+    });
+  }
+
+  return (
+    <Card className="border-border shadow-md rounded-sm">
+      <CardHeader className="border-b border-border bg-muted/30 pb-6 text-center">
+        <div className="w-12 h-12 bg-primary rounded mx-auto flex items-center justify-center mb-3">
+          <div className="w-4 h-4 bg-accent rotate-45 transform" />
+        </div>
+        <CardTitle className="font-serif text-2xl text-primary">Sign in to Apply</CardTitle>
+        <CardDescription className="text-base">
+          Create a free account or sign in to track your application and receive updates.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pt-6">
+        <Tabs defaultValue="register">
+          <TabsList className="w-full mb-6">
+            <TabsTrigger value="register" className="flex-1 gap-2">
+              <UserPlus className="w-4 h-4" /> Create Account
+            </TabsTrigger>
+            <TabsTrigger value="login" className="flex-1 gap-2">
+              <LogIn className="w-4 h-4" /> Sign In
+            </TabsTrigger>
+          </TabsList>
+
+          {/* ── Register Tab ── */}
+          <TabsContent value="register">
+            {registerUser.isError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  {registerUser.error?.message || "Registration failed. Please try again."}
+                </AlertDescription>
+              </Alert>
+            )}
+            <Form {...registerForm}>
+              <form onSubmit={registerForm.handleSubmit(handleRegisterSubmit)} className="space-y-5">
+                <FormField
+                  control={registerForm.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John Doe" {...field} className="bg-background" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={registerForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email Address</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="john@example.com" {...field} className="bg-background" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={registerForm.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="••••••••" {...field} className="bg-background" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  className="w-full h-12 text-base font-medium"
+                  disabled={registerUser.isPending}
+                >
+                  {registerUser.isPending ? "Creating account..." : "Create Account & Continue"}
+                </Button>
+              </form>
+            </Form>
+          </TabsContent>
+
+          {/* ── Login Tab ── */}
+          <TabsContent value="login">
+            {loginUser.isError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  {loginUser.error?.message || "Invalid credentials. Please try again."}
+                </AlertDescription>
+              </Alert>
+            )}
+            <Form {...loginForm}>
+              <form onSubmit={loginForm.handleSubmit(handleLoginSubmit)} className="space-y-5">
+                <FormField
+                  control={loginForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email Address</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="john@example.com" {...field} className="bg-background" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={loginForm.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="••••••••" {...field} className="bg-background" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  className="w-full h-12 text-base font-medium"
+                  disabled={loginUser.isPending}
+                >
+                  {loginUser.isPending ? "Signing in..." : "Sign In & Continue"}
+                </Button>
+              </form>
+            </Form>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Main Apply Page ─────────────────────────────────────────────────────────
+
 export default function Apply() {
+  const hasToken = !!localStorage.getItem("bluestar_token");
+  const { data: currentUser, isLoading: authLoading, isError: authError } = useGetCurrentUser({
+    query: { enabled: hasToken },
+  });
+  const isAuthenticated = !!currentUser;
+
   const [isSuccess, setIsSuccess] = useState(false);
   const [applicationId, setApplicationId] = useState<number | null>(null);
   const [selectedAddons, setSelectedAddons] = useState<Record<AddonId, boolean>>({
@@ -84,6 +293,20 @@ export default function Apply() {
       coverLetter: "",
     },
   });
+
+  // Pre-fill name & email once the user is authenticated
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.fullName) form.setValue("fullName", currentUser.fullName, { shouldValidate: true });
+      if (currentUser.email) form.setValue("email", currentUser.email, { shouldValidate: true });
+    }
+  }, [currentUser, form]);
+
+  // Called right after inline auth succeeds (before the query re-fetches)
+  function handleInlineAuth(name: string, email: string) {
+    if (name) form.setValue("fullName", name, { shouldValidate: true });
+    if (email) form.setValue("email", email, { shouldValidate: true });
+  }
 
   const totalAddonAmount = ADDONS.filter(a => selectedAddons[a.id as AddonId]).reduce((sum, a) => sum + a.price, 0);
   const hasAddons = Object.values(selectedAddons).some(Boolean);
@@ -148,7 +371,6 @@ export default function Apply() {
   function handleFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) handleFileSelect(file);
-    // reset so the same file can be re-selected
     e.target.value = "";
   }
 
@@ -208,6 +430,8 @@ export default function Apply() {
       }
     });
   }
+
+  // ── Success screens ──────────────────────────────────────────────────────
 
   if (isSuccess && !showPayment) {
     return (
@@ -348,6 +572,8 @@ export default function Apply() {
     );
   }
 
+  // ── Main form view ───────────────────────────────────────────────────────
+
   return (
     <div className="w-full bg-background pb-24 pt-12">
       <div className="container mx-auto px-4 max-w-4xl">
@@ -356,274 +582,283 @@ export default function Apply() {
           <p className="text-muted-foreground text-lg">Take the next step in your global career.</p>
         </div>
 
-        <Card className="border-border shadow-md rounded-sm">
-          <CardHeader className="border-b border-border bg-muted/30 pb-6">
-            <CardTitle className="font-serif text-2xl text-primary">Candidate Profile</CardTitle>
-            <CardDescription>Please provide accurate details for our recruitment team.</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-8">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {/* ── Auth gate: shown while loading or when not authenticated ── */}
+        {authLoading && !authError ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : !isAuthenticated ? (
+          <div className="max-w-md mx-auto">
+            <AuthPanel onAuth={handleInlineAuth} />
+          </div>
+        ) : (
+          /* ── Application form: shown once authenticated ── */
+          <Card className="border-border shadow-md rounded-sm">
+            <CardHeader className="border-b border-border bg-muted/30 pb-6">
+              <CardTitle className="font-serif text-2xl text-primary">Candidate Profile</CardTitle>
+              <CardDescription>Please provide accurate details for our recruitment team.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-8">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="fullName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground">Full Legal Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="John Doe" {...field} className="bg-background" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground">Email Address</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="john.doe@example.com" {...field} className="bg-background" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground">Phone Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="+1 (555) 000-0000" {...field} className="bg-background" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="country"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground">Country of Residence</FormLabel>
-                        <FormControl>
-                          <Input placeholder="USA, Australia, UK..." {...field} className="bg-background" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="position"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground">Desired Position</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={form.control}
+                      name="fullName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground">Full Legal Name</FormLabel>
                           <FormControl>
-                            <SelectTrigger className="bg-background">
-                              <SelectValue placeholder="Select a position" />
-                            </SelectTrigger>
+                            <Input placeholder="John Doe" {...field} className="bg-background" />
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Nurse">Nurse</SelectItem>
-                            <SelectItem value="Civil Engineer">Civil Engineer</SelectItem>
-                            <SelectItem value="CNC Machinist">CNC Machinist</SelectItem>
-                            <SelectItem value="Oil Rig Engineer">Oil Rig Engineer</SelectItem>
-                            <SelectItem value="Electrician">Electrician</SelectItem>
-                            <SelectItem value="Mechanical Engineer">Mechanical Engineer</SelectItem>
-                            <SelectItem value="Ship Crew Member">Ship Crew Member</SelectItem>
-                            <SelectItem value="Hospitality Manager">Hospitality Manager</SelectItem>
-                            <SelectItem value="Retail Supervisor">Retail Supervisor</SelectItem>
-                            <SelectItem value="Logistics Coordinator">Logistics Coordinator</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground">Email Address</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="john.doe@example.com" {...field} className="bg-background" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground">Phone Number</FormLabel>
+                          <FormControl>
+                            <Input placeholder="+1 (555) 000-0000" {...field} className="bg-background" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="country"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground">Country of Residence</FormLabel>
+                          <FormControl>
+                            <Input placeholder="USA, Australia, UK..." {...field} className="bg-background" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="position"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground">Desired Position</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="bg-background">
+                                <SelectValue placeholder="Select a position" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Nurse">Nurse</SelectItem>
+                              <SelectItem value="Civil Engineer">Civil Engineer</SelectItem>
+                              <SelectItem value="CNC Machinist">CNC Machinist</SelectItem>
+                              <SelectItem value="Oil Rig Engineer">Oil Rig Engineer</SelectItem>
+                              <SelectItem value="Electrician">Electrician</SelectItem>
+                              <SelectItem value="Mechanical Engineer">Mechanical Engineer</SelectItem>
+                              <SelectItem value="Ship Crew Member">Ship Crew Member</SelectItem>
+                              <SelectItem value="Hospitality Manager">Hospitality Manager</SelectItem>
+                              <SelectItem value="Retail Supervisor">Retail Supervisor</SelectItem>
+                              <SelectItem value="Logistics Coordinator">Logistics Coordinator</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="yearsOfExperience"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground">Years of Experience</FormLabel>
+                          <FormControl>
+                            <Input type="number" min="0" {...field} className="bg-background" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* CV Upload */}
+                  <div>
+                    <Label className="text-foreground mb-3 block">Resume / Curriculum Vitae</Label>
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      className="hidden"
+                      onChange={handleFileInputChange}
+                    />
+
+                    {cvFile ? (
+                      <div className="border-2 border-border rounded-sm p-4 bg-muted/20">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <FileText className="w-5 h-5 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{cvFile.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(cvFile.size / 1024).toFixed(0)} KB
+                              {cvUploading && " · Uploading..."}
+                              {cvUploadedUrl && !cvUploading && " · Uploaded ✓"}
+                            </p>
+                          </div>
+                          {cvUploading ? (
+                            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={removeCv}
+                              className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                        onDragLeave={() => setIsDragging(false)}
+                        onDrop={handleDrop}
+                        className={`border-2 border-dashed rounded-sm p-8 text-center transition-colors cursor-pointer group ${
+                          isDragging
+                            ? "border-primary bg-primary/5"
+                            : "border-border bg-muted/20 hover:bg-muted/40 hover:border-primary/50"
+                        }`}
+                      >
+                        <UploadCloud className={`w-10 h-10 mx-auto mb-4 transition-colors ${isDragging ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
+                        <p className="text-sm font-medium text-foreground">Click to upload or drag and drop</p>
+                        <p className="text-xs text-muted-foreground mt-1">PDF, DOCX, or DOC (Max 5MB)</p>
+                      </div>
                     )}
-                  />
+
+                    {cvError && (
+                      <p className="text-sm text-destructive mt-2 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4" /> {cvError}
+                      </p>
+                    )}
+                  </div>
 
                   <FormField
                     control={form.control}
-                    name="yearsOfExperience"
+                    name="coverLetter"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-foreground">Years of Experience</FormLabel>
+                        <FormLabel className="text-foreground">Cover Letter (Optional)</FormLabel>
                         <FormControl>
-                          <Input type="number" min="0" {...field} className="bg-background" />
+                          <Textarea
+                            placeholder="Tell us why you're the right fit for this position..."
+                            className="min-h-[150px] bg-background resize-y"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
 
-                {/* CV Upload */}
-                <div>
-                  <Label className="text-foreground mb-3 block">Resume / Curriculum Vitae</Label>
-
-                  {/* Hidden file input */}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    className="hidden"
-                    onChange={handleFileInputChange}
-                  />
-
-                  {cvFile ? (
-                    /* Uploaded file display */
-                    <div className="border-2 border-border rounded-sm p-4 bg-muted/20">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <FileText className="w-5 h-5 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{cvFile.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {(cvFile.size / 1024).toFixed(0)} KB
-                            {cvUploading && " · Uploading..."}
-                            {cvUploadedUrl && !cvUploading && " · Uploaded ✓"}
-                          </p>
-                        </div>
-                        {cvUploading ? (
-                          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin flex-shrink-0" />
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={removeCv}
-                            className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+                  {/* Add-ons Section */}
+                  <div className="border-t border-border pt-8">
+                    <div className="mb-6">
+                      <h3 className="font-serif text-xl font-bold text-primary mb-2">Optional Add-ons</h3>
+                      <p className="text-muted-foreground text-sm">
+                        Enhance your application with our Candidate Support Program. Your application is free — add-ons are paid separately via bank transfer after submission.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {ADDONS.map((addon) => {
+                        const checked = selectedAddons[addon.id as AddonId];
+                        return (
+                          <div
+                            key={addon.id}
+                            onClick={() => toggleAddon(addon.id as AddonId)}
+                            className={`relative border-2 rounded-sm p-5 cursor-pointer transition-all ${
+                              checked
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:border-primary/50"
+                            }`}
                           >
-                            <X className="w-5 h-5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    /* Drop zone */
-                    <div
-                      onClick={() => fileInputRef.current?.click()}
-                      onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
-                      onDragLeave={() => setIsDragging(false)}
-                      onDrop={handleDrop}
-                      className={`border-2 border-dashed rounded-sm p-8 text-center transition-colors cursor-pointer group ${
-                        isDragging
-                          ? "border-primary bg-primary/5"
-                          : "border-border bg-muted/20 hover:bg-muted/40 hover:border-primary/50"
-                      }`}
-                    >
-                      <UploadCloud className={`w-10 h-10 mx-auto mb-4 transition-colors ${isDragging ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
-                      <p className="text-sm font-medium text-foreground">Click to upload or drag and drop</p>
-                      <p className="text-xs text-muted-foreground mt-1">PDF, DOCX, or DOC (Max 5MB)</p>
-                    </div>
-                  )}
-
-                  {cvError && (
-                    <p className="text-sm text-destructive mt-2 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" /> {cvError}
-                    </p>
-                  )}
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="coverLetter"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-foreground">Cover Letter (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Tell us why you're the right fit for this position..."
-                          className="min-h-[150px] bg-background resize-y"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Add-ons Section */}
-                <div className="border-t border-border pt-8">
-                  <div className="mb-6">
-                    <h3 className="font-serif text-xl font-bold text-primary mb-2">Optional Add-ons</h3>
-                    <p className="text-muted-foreground text-sm">
-                      Enhance your application with our Candidate Support Program. Your application is free — add-ons are paid separately via bank transfer after submission.
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {ADDONS.map((addon) => {
-                      const checked = selectedAddons[addon.id as AddonId];
-                      return (
-                        <div
-                          key={addon.id}
-                          onClick={() => toggleAddon(addon.id as AddonId)}
-                          className={`relative border-2 rounded-sm p-5 cursor-pointer transition-all ${
-                            checked
-                              ? "border-primary bg-primary/5"
-                              : "border-border hover:border-primary/50"
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <Checkbox
-                              checked={checked}
-                              className="mt-0.5"
-                              onCheckedChange={() => toggleAddon(addon.id as AddonId)}
-                              onClick={e => e.stopPropagation()}
-                            />
-                            <div className="flex-1">
-                              <p className="font-semibold text-foreground mb-1">{addon.label}</p>
-                              <p className="text-xs text-muted-foreground leading-relaxed">{addon.description}</p>
+                            <div className="flex items-start gap-3">
+                              <Checkbox
+                                checked={checked}
+                                className="mt-0.5"
+                                onCheckedChange={() => toggleAddon(addon.id as AddonId)}
+                                onClick={e => e.stopPropagation()}
+                              />
+                              <div className="flex-1">
+                                <p className="font-semibold text-foreground mb-1">{addon.label}</p>
+                                <p className="text-xs text-muted-foreground leading-relaxed">{addon.description}</p>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
+                    {hasAddons && (
+                      <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-sm">
+                        <p className="font-semibold text-primary">Add-ons Selected</p>
+                        <p className="text-sm text-muted-foreground">Payment details will be arranged via bank transfer after submission</p>
+                      </div>
+                    )}
                   </div>
-                  {hasAddons && (
-                    <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-sm">
-                      <p className="font-semibold text-primary">Add-ons Selected</p>
-                      <p className="text-sm text-muted-foreground">Payment details will be arranged via bank transfer after submission</p>
+
+                  {form.formState.errors.root && (
+                    <div className="flex items-center gap-2 text-destructive text-sm">
+                      <AlertCircle className="w-4 h-4" />
+                      <span>{form.formState.errors.root.message}</span>
                     </div>
                   )}
-                </div>
 
-                {form.formState.errors.root && (
-                  <div className="flex items-center gap-2 text-destructive text-sm">
-                    <AlertCircle className="w-4 h-4" />
-                    <span>{form.formState.errors.root.message}</span>
+                  <div className="pt-6 border-t border-border flex justify-end">
+                    <Button
+                      type="submit"
+                      size="lg"
+                      className="w-full md:w-auto bg-primary hover:bg-primary/90 rounded-sm text-lg px-10 h-14"
+                      disabled={submitApplication.isPending || cvUploading}
+                    >
+                      {submitApplication.isPending
+                        ? "Submitting..."
+                        : cvUploading
+                        ? "Uploading CV..."
+                        : hasAddons
+                        ? "Submit & Continue to Payment"
+                        : "Submit Application"}
+                    </Button>
                   </div>
-                )}
-
-                <div className="pt-6 border-t border-border flex justify-end">
-                  <Button
-                    type="submit"
-                    size="lg"
-                    className="w-full md:w-auto bg-primary hover:bg-primary/90 rounded-sm text-lg px-10 h-14"
-                    disabled={submitApplication.isPending || cvUploading}
-                  >
-                    {submitApplication.isPending
-                      ? "Submitting..."
-                      : cvUploading
-                      ? "Uploading CV..."
-                      : hasAddons
-                      ? "Submit & Continue to Payment"
-                      : "Submit Application"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
