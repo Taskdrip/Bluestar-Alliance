@@ -99,9 +99,19 @@ export default function Navbar() {
           ))}
           {user ? (
             <div className="flex items-center gap-4 border-l pl-4">
-              {user.role === "admin" && (
+              {user.role === "admin" ? (
                 <Link href="/admin" className="text-sm font-medium text-primary hover:text-accent">
                   Admin
+                </Link>
+              ) : (
+                <Link
+                  href="/dashboard"
+                  className={`text-sm font-semibold px-3 py-1.5 rounded-md transition-colors
+                    ${location === "/dashboard"
+                      ? "bg-primary text-white"
+                      : "bg-primary/10 text-primary hover:bg-primary/20"}`}
+                >
+                  My Portal
                 </Link>
               )}
 
@@ -205,8 +215,18 @@ export default function Navbar() {
                 <div className="h-px bg-border my-4" />
                 {user ? (
                   <>
-                    {user.role === "admin" && (
+                    {user.role === "admin" ? (
                       <Link href="/admin" className="text-lg font-medium text-primary">Admin</Link>
+                    ) : (
+                      <Link
+                        href="/dashboard"
+                        className={`text-lg font-semibold px-4 py-2 rounded-lg transition-colors
+                          ${location === "/dashboard"
+                            ? "bg-primary text-white"
+                            : "bg-primary/10 text-primary"}`}
+                      >
+                        My Portal
+                      </Link>
                     )}
                     {notifs.filter(n => !n.isRead).length > 0 && (
                       <div className="bg-primary/5 border border-primary/20 rounded-sm p-3">
