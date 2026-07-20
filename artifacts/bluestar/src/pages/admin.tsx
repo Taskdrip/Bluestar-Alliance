@@ -128,8 +128,9 @@ export default function Admin() {
   const [expandedEnquiry, setExpandedEnquiry]   = useState<number | null>(null);
   const [deletingEnquiry, setDeletingEnquiry]   = useState<number | null>(null);
 
-  // Notification badge
-  const [unreadNotifs, setUnreadNotifs] = useState(0);
+  // Notification badges
+  const [unreadNotifs,   setUnreadNotifs]   = useState(0); // admin in-app notifications
+  const [unreadDmCount,  setUnreadDmCount]  = useState(0); // unread user→admin DMs (widget + dashboard)
 
   const { data: user, isLoading: isLoadingUser } = useGetCurrentUser({
     query: {
@@ -175,15 +176,28 @@ export default function Admin() {
 
   const token = localStorage.getItem("bluestar_token");
 
+  // Poll both admin notifications AND unread user DMs every 10 seconds so the
+  // Chat tab badge updates in real-time whenever someone writes from the widget.
   useEffect(() => {
-    if (user?.role === "admin" && token) {
-      fetch("/api/notifications", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+    if (!user || user.role !== "admin" || !token) return;
+    const poll = () => {
+      // Admin in-app notifications (general badge in nav)
+      fetch("/api/notifications", { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.ok ? r.json() : [])
-        .then((notifs: any[]) => setUnreadNotifs(notifs.filter(n => !n.isRead).length))
+        .then((notifs: any[]) => setUnreadNotifs(notifs.filter((n: any) => !n.isRead).length))
         .catch(() => {});
-    }
+      // Unread user→admin DMs — drives the Chat tab badge specifically
+      fetch("/api/direct-messages", { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : [])
+        .then((threads: any[]) => {
+          const total = threads.reduce((sum: number, t: any) => sum + (t.unread ?? 0), 0);
+          setUnreadDmCount(total);
+        })
+        .catch(() => {});
+    };
+    poll();
+    const iv = setInterval(poll, 10000);
+    return () => clearInterval(iv);
   }, [user, token]);
 
   useEffect(() => {
@@ -747,9 +761,9 @@ export default function Admin() {
                 >
                   <Icon className="w-4 h-4" />
                   {tab.label}
-                  {tab.id === "chat" && unreadNotifs > 0 && (
+                  {tab.id === "chat" && unreadDmCount > 0 && (
                     <span className="absolute -top-0 -right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {unreadNotifs}
+                      {unreadDmCount > 99 ? "99+" : unreadDmCount}
                     </span>
                   )}
                 </button>

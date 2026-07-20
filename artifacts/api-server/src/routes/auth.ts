@@ -13,7 +13,10 @@ router.post("/register", async (req, res) => {
     res.status(400).json({ error: "Validation error", details: parsed.error.issues });
     return;
   }
-  const { email, password, fullName } = parsed.data;
+  // Normalize email to lowercase so "User@Example.com" and "user@example.com"
+  // are always treated as the same account.
+  const email = parsed.data.email.trim().toLowerCase();
+  const { password, fullName } = parsed.data;
 
   const existing = await db.select().from(usersTable).where(eq(usersTable.email, email));
   if (existing.length > 0) {
@@ -37,7 +40,8 @@ router.post("/login", async (req, res) => {
     res.status(400).json({ error: "Validation error" });
     return;
   }
-  const { email, password } = parsed.data;
+  const email = parsed.data.email.trim().toLowerCase();
+  const { password } = parsed.data;
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
   if (!user || !verifyPassword(password, user.passwordHash)) {

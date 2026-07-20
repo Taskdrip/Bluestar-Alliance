@@ -504,7 +504,7 @@ function MessagesTab({ applications, token, user }: { applications: Application[
 }
 
 // ─── Tab: Notifications ──────────────────────────────────────────────────────
-function NotificationsTab({ token }: { token: string }) {
+function NotificationsTab({ token, onNavigate }: { token: string; onNavigate: (tab: TabId) => void }) {
   const [notifs, setNotifs] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -521,6 +521,21 @@ function NotificationsTab({ token }: { token: string }) {
     }).then(() => setNotifs(prev => prev.map(n => ({ ...n, isRead: true })))).catch(() => {});
   };
 
+  // Mark a single notification as read and navigate to the relevant tab
+  const handleClick = (n: Notification) => {
+    if (!n.isRead) {
+      fetch(`/api/notifications/${n.id}/read`, {
+        method: "PATCH", headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(() => setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, isRead: true } : x)))
+        .catch(() => {});
+    }
+    // Route to the tab that matches the notification type
+    if (n.type === "message") onNavigate("messages");
+    else if (n.type === "status") onNavigate("applications");
+    else if (n.type === "payment") onNavigate("orders");
+  };
+
   useEffect(() => { load(); const iv = setInterval(load, 10000); return () => clearInterval(iv); }, []);
 
   const unread = notifs.filter(n => !n.isRead).length;
@@ -529,6 +544,13 @@ function NotificationsTab({ token }: { token: string }) {
     if (type === "message") return <MessageSquare className="w-4 h-4 text-[#0f2c6b]" />;
     if (type === "payment") return <Package className="w-4 h-4 text-amber-500" />;
     return <Bell className="w-4 h-4 text-gray-400" />;
+  };
+
+  const destinationLabel = (n: Notification) => {
+    if (n.type === "message")  return "Go to Messages →";
+    if (n.type === "status")   return "Go to Applications →";
+    if (n.type === "payment")  return "Go to Orders →";
+    return null;
   };
 
   if (loading) return <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>;
@@ -548,8 +570,12 @@ function NotificationsTab({ token }: { token: string }) {
           <p className="text-sm text-gray-400 max-w-xs">You'll be notified here about application updates and messages from HR.</p>
         </div>
       ) : notifs.map(n => (
-        <div key={n.id} className={`flex items-start gap-3 px-4 py-3.5 rounded-xl border transition-colors
-          ${n.isRead ? "bg-white border-gray-200" : "bg-[#0f2c6b]/4 border-[#0f2c6b]/15"}`}>
+        <button
+          key={n.id}
+          onClick={() => handleClick(n)}
+          className={`w-full text-left flex items-start gap-3 px-4 py-3.5 rounded-xl border transition-colors hover:shadow-sm active:scale-[0.99]
+            ${n.isRead ? "bg-white border-gray-200 hover:bg-gray-50" : "bg-[#0f2c6b]/4 border-[#0f2c6b]/15 hover:bg-[#0f2c6b]/8"}`}
+        >
           <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
             {typeIcon(n.type)}
           </div>
@@ -557,10 +583,15 @@ function NotificationsTab({ token }: { token: string }) {
             <p className={`text-sm leading-snug ${n.isRead ? "text-gray-600" : "text-gray-900 font-medium"}`}>
               {n.message}
             </p>
-            <p className="text-xs text-gray-400 mt-1">{fmtTime(n.createdAt)}</p>
+            <div className="flex items-center gap-3 mt-1">
+              <p className="text-xs text-gray-400">{fmtTime(n.createdAt)}</p>
+              {destinationLabel(n) && (
+                <span className="text-xs text-[#0f2c6b] font-medium">{destinationLabel(n)}</span>
+              )}
+            </div>
           </div>
           {!n.isRead && <Circle className="w-2 h-2 fill-[#0f2c6b] text-[#0f2c6b] shrink-0 mt-2" />}
-        </div>
+        </button>
       ))}
     </div>
   );
@@ -844,7 +875,7 @@ export default function Dashboard() {
           <MessagesTab applications={applications} token={token!} user={user} />
         )}
         {activeTab === "notifications" && (
-          <NotificationsTab token={token!} />
+          <NotificationsTab token={token!} onNavigate={setActiveTab} />
         )}
         {activeTab === "orders" && (
           <OrdersTab token={token!} />
