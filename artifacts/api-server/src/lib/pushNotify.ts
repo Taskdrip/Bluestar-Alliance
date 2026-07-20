@@ -8,7 +8,7 @@ function ensureVapid() {
   if (vapidInitialized) return true;
   const pub = process.env.VAPID_PUBLIC_KEY;
   const priv = process.env.VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT ?? "mailto:admin@bluestaralliance.com";
+  const subject = process.env.VAPID_SUBJECT ?? "mailto:info@bluestaralliance.site";
   if (!pub || !priv) return false;
   webpush.setVapidDetails(subject, pub, priv);
   vapidInitialized = true;

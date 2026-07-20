@@ -291,7 +291,7 @@ export default function TeamTab({ token }: TeamTabProps) {
             <div className="p-5 space-y-4">
               {[
                 { key: "fullName", label: "Full Name", placeholder: "e.g. Jane Smith", type: "text" },
-                { key: "email", label: "Email", placeholder: "jane@bluestaralliance.com", type: "email" },
+                { key: "email", label: "Email", placeholder: "jane@bluestaralliance.site", type: "email" },
                 { key: "password", label: "Initial Password", placeholder: "At least 8 characters", type: "password" },
               ].map(({ key, label, placeholder, type }) => (
                 <div key={key}>

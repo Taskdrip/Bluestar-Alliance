@@ -386,7 +386,7 @@ export default function Home() {
 
               <div className="border-t border-border pt-6">
                 <p className="text-muted-foreground mb-2">To apply or ask questions, contact our HR team:</p>
-                <p className="font-semibold text-primary">bluestaralliancecompanyltd@gmail.com</p>
+                <p className="font-semibold text-primary">info@bluestaralliance.site</p>
                 <p className="text-sm text-muted-foreground mt-4 italic">
                   — Sharon Healey MacKinnon, Human Resources Department, Bluestar Alliance Company Limited
                 </p>

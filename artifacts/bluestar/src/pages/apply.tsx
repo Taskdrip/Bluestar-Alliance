@@ -894,7 +894,7 @@ export default function Apply() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground text-center mt-4">
-              Your application has already been submitted. Contact us at bluestaralliancecompanyltd@gmail.com for questions.
+              Your application has already been submitted. Contact us at info@bluestaralliance.site for questions.
             </p>
           </>
         )}

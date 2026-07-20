@@ -12,7 +12,7 @@ const offices = [
     badge: "Global Headquarters",
     address: "150, West Jefferson Avenue\nDetroit, Michigan 48201\nUnited States",
     phone: "+1 (800) 555-BLUE",
-    email: "usa@bluestaralliance.com",
+    email: "info@bluestaralliance.site",
     hours: "Mon – Fri: 8:00 am – 6:00 pm EST",
     focus: "Corporate governance, North & South America recruitment",
   },
@@ -21,7 +21,7 @@ const offices = [
     badge: "Asia-Pacific Operations",
     address: "Level 12, St Georges Terrace\nPerth WA 6000\nAustralia",
     phone: "+61 (8) 9000 0000",
-    email: "au@bluestaralliance.com",
+    email: "info@bluestaralliance.site",
     hours: "Mon – Fri: 8:00 am – 5:30 pm AWST",
     focus: "Mining, LNG, engineering — Australasia & Southeast Asia",
   },
@@ -30,7 +30,7 @@ const offices = [
     badge: "Australia East Coast Branch",
     address: "Suite 18.01, 1 Market Street\nSydney NSW 2000\nAustralia",
     phone: "+61 (2) 8000 0000",
-    email: "sydney@bluestaralliance.com",
+    email: "info@bluestaralliance.site",
     hours: "Mon – Fri: 8:00 am – 5:30 pm AEST",
     focus: "Engineering, healthcare, logistics — East Australia & New Zealand",
   },
@@ -39,7 +39,7 @@ const offices = [
     badge: "Middle East Hub",
     address: "Suite 801, Business Bay Tower\nDubai, UAE",
     phone: "+971 4 000 0000",
-    email: "me@bluestaralliance.com",
+    email: "info@bluestaralliance.site",
     hours: "Sun – Thu: 8:00 am – 5:00 pm GST",
     focus: "Oil & gas, construction, hospitality — GCC & North Africa",
   },
@@ -129,9 +129,9 @@ export default function Contact() {
                 For enquiries not specific to a regional office, our central team responds within one business day.
               </p>
               <div className="space-y-3">
-                <a href="mailto:inquiries@bluestaralliance.com" className="flex items-center gap-3 text-sm text-foreground hover:text-primary transition-colors">
+                <a href="mailto:info@bluestaralliance.site" className="flex items-center gap-3 text-sm text-foreground hover:text-primary transition-colors">
                   <Mail className="w-5 h-5 text-primary" />
-                  inquiries@bluestaralliance.com
+                  info@bluestaralliance.site
                 </a>
                 <a href="tel:+18005550000" className="flex items-center gap-3 text-sm text-foreground hover:text-primary transition-colors">
                   <Phone className="w-5 h-5 text-primary" />
@@ -167,7 +167,7 @@ export default function Contact() {
                 <p className="text-muted-foreground text-sm leading-relaxed mb-4">
                   Tell us your requirements and a senior consultant will reach out to discuss a tailored recruitment strategy within 24 hours.
                 </p>
-                <a href="mailto:clients@bluestaralliance.com" className="inline-block bg-primary text-primary-foreground font-semibold text-sm px-5 py-2.5 rounded-sm hover:bg-primary/90 transition-colors">
+                <a href="mailto:info@bluestaralliance.site" className="inline-block bg-primary text-primary-foreground font-semibold text-sm px-5 py-2.5 rounded-sm hover:bg-primary/90 transition-colors">
                   Employer Enquiry →
                 </a>
               </CardContent>
