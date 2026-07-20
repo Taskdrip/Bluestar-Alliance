@@ -166,6 +166,69 @@ router.post("/broadcast", async (req, res) => {
 });
 
 /**
+ * POST /api/direct-messages/guest — public, no auth required
+ * Allows unauthenticated visitors to send a chat message via the widget
+ */
+router.post("/guest", async (req, res) => {
+  const { name, email, content } = req.body;
+  if (!name?.trim() || !email?.trim() || !content?.trim()) {
+    res.status(400).json({ error: "name, email, and content are required" }); return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({ error: "Invalid email" }); return;
+  }
+  try {
+    const [message] = await db.insert(directMessagesTable).values({
+      userEmail: email.trim().toLowerCase(),
+      senderRole: "user",
+      senderName: name.trim(),
+      content: content.trim(),
+      isRead: false,
+    }).returning();
+
+    // Notify admin in-app
+    await db.insert(notificationsTable).values({
+      recipientEmail: "admin",
+      recipientRole: "admin",
+      message: `${name.trim()} (${email.trim()}) sent a message via the chat widget`,
+      type: "message",
+      relatedId: null,
+      isRead: false,
+    }).catch(() => {});
+
+    res.status(201).json(serialize(message));
+  } catch {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+/**
+ * GET /api/direct-messages/guest/:email — public, no auth required
+ * Returns the DM thread for a guest visitor by email so they can see replies
+ */
+router.get("/guest/:email", async (req, res) => {
+  const userEmail = decodeURIComponent(req.params.email).toLowerCase();
+  try {
+    const msgs = await db
+      .select()
+      .from(directMessagesTable)
+      .where(eq(directMessagesTable.userEmail, userEmail))
+      .orderBy(directMessagesTable.createdAt);
+
+    // Mark admin replies as read when the guest views them
+    await db
+      .update(directMessagesTable)
+      .set({ isRead: true })
+      .where(and(eq(directMessagesTable.userEmail, userEmail), eq(directMessagesTable.senderRole, "admin")))
+      .catch(() => {});
+
+    res.json(msgs.map(serialize));
+  } catch {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+/**
  * GET /api/direct-messages/:email
  * Admin only: get full DM thread for a specific user
  */

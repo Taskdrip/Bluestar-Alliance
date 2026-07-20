@@ -15,6 +15,7 @@ import newsletterRouter from "./newsletter";
 import uploadRouter from "./upload";
 import announcementRouter from "./announcement";
 import directMessagesRouter from "./direct-messages";
+import enquiriesRouter from "./enquiries";
 import { db, paymentSettingsTable } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -35,6 +36,7 @@ router.use("/newsletter", newsletterRouter);
 router.use("/upload", uploadRouter);
 router.use("/announcement-popup", announcementRouter);
 router.use("/direct-messages", directMessagesRouter);
+router.use("/enquiries", enquiriesRouter);
 
 // Public read-only payment settings (applicants need bank details after addon selection)
 router.get("/payment-settings", async (_req, res) => {

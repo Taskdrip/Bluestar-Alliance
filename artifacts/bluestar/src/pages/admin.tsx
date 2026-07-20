@@ -31,7 +31,7 @@ import {
   AlertCircle, Briefcase, CheckCircle, Clock, FileText, Users,
   Plus, Pencil, Trash2, Send, MessageSquare, CreditCard, Settings,
   Package, Eye, X, Quote, Mail, Newspaper, Database, Shield, Megaphone,
-  UploadCloud, ShieldAlert, Bell, Timer
+  UploadCloud, ShieldAlert, Bell, Timer, Inbox, MailOpen, Phone, Globe2, ChevronDown, ChevronUp
 } from "lucide-react";
 import EmailTab from "./admin-email";
 import NewsletterTab from "./admin-newsletter";
@@ -39,9 +39,9 @@ import UsersTab from "./admin-users";
 import TeamTab from "./admin-team";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-type Tab = "overview" | "applications" | "jobs" | "chat" | "email" | "newsletter" | "payment" | "orders" | "testimonials" | "users" | "team" | "popup" | "push";
+type Tab = "overview" | "applications" | "jobs" | "chat" | "email" | "newsletter" | "payment" | "orders" | "testimonials" | "users" | "team" | "popup" | "push" | "enquiries";
 
-const ALL_TAB_IDS = ["overview","applications","jobs","testimonials","chat","email","newsletter","payment","orders","users","popup","push"] as const;
+const ALL_TAB_IDS = ["overview","applications","jobs","testimonials","chat","email","newsletter","payment","orders","users","popup","push","enquiries"] as const;
 
 export default function Admin() {
   const [, setLocation] = useLocation();
@@ -118,6 +118,13 @@ export default function Admin() {
   const [pushSending, setPushSending] = useState(false);
   const [pushResult, setPushResult] = useState<{ sent: number; failed: number; total: number; message?: string } | null>(null);
   const [pushError, setPushError] = useState<string | null>(null);
+
+  // Enquiries state
+  const [enquiriesList, setEnquiriesList]       = useState<any[]>([]);
+  const [enquiriesLoading, setEnquiriesLoading] = useState(false);
+  const [enquiriesFilter, setEnquiriesFilter]   = useState<"all" | "unread" | "read">("all");
+  const [expandedEnquiry, setExpandedEnquiry]   = useState<number | null>(null);
+  const [deletingEnquiry, setDeletingEnquiry]   = useState<number | null>(null);
 
   // Notification badge
   const [unreadNotifs, setUnreadNotifs] = useState(0);
@@ -237,6 +244,40 @@ export default function Admin() {
         .catch(() => {});
     }
   }, [activeTab, token]);
+
+  // Load enquiries when switching to enquiries tab
+  useEffect(() => {
+    if (activeTab === "enquiries" && token) {
+      setEnquiriesLoading(true);
+      fetch("/api/enquiries", { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : [])
+        .then(data => setEnquiriesList(data))
+        .catch(() => {})
+        .finally(() => setEnquiriesLoading(false));
+    }
+  }, [activeTab, token]);
+
+  const markEnquiryRead = async (id: number) => {
+    try {
+      const res = await fetch(`/api/enquiries/${id}/read`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setEnquiriesList(prev => prev.map(e => e.id === id ? { ...e, isRead: true } : e));
+    } catch { /* silent */ }
+  };
+
+  const deleteEnquiry = async (id: number) => {
+    setDeletingEnquiry(id);
+    try {
+      const res = await fetch(`/api/enquiries/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setEnquiriesList(prev => prev.filter(e => e.id !== id));
+    } catch { /* silent */ }
+    setDeletingEnquiry(null);
+  };
 
   // Fetch messages once when app selected, then poll every 4 s while chat is open
   useEffect(() => {
@@ -602,6 +643,7 @@ export default function Admin() {
     { id: "users", label: "Users DB", icon: Database },
     { id: "popup", label: "Announcement Popup", icon: Megaphone },
     { id: "push", label: "Push Notifications", icon: Bell },
+    { id: "enquiries", label: "Enquiries", icon: Inbox },
     { id: "team", label: "Admin Team", icon: Shield, superAdminOnly: true },
   ];
 
@@ -1689,6 +1731,204 @@ export default function Admin() {
                 <p>No testimonials yet. Add your first success story.</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── Enquiries Tab ── */}
+        {activeTab === "enquiries" && (
+          <div className="container mx-auto px-4 md:px-8 py-8">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+              <div>
+                <h2 className="font-serif text-2xl font-bold text-primary flex items-center gap-2">
+                  <Inbox className="w-6 h-6" />
+                  Contact Enquiries
+                  {enquiriesList.filter(e => !e.isRead).length > 0 && (
+                    <span className="ml-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                      {enquiriesList.filter(e => !e.isRead).length} new
+                    </span>
+                  )}
+                </h2>
+                <p className="text-muted-foreground text-sm mt-1">All enquiries submitted via the Contact page</p>
+              </div>
+              {/* Filter pills */}
+              <div className="flex gap-2">
+                {(["all", "unread", "read"] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setEnquiriesFilter(f)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-semibold capitalize transition-colors
+                      ${enquiriesFilter === f
+                        ? "bg-primary text-white"
+                        : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
+                  >
+                    {f === "all"
+                      ? `All (${enquiriesList.length})`
+                      : f === "unread"
+                        ? `Unread (${enquiriesList.filter(e => !e.isRead).length})`
+                        : `Read (${enquiriesList.filter(e => e.isRead).length})`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {enquiriesLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map(i => <Skeleton key={i} className="h-40 w-full rounded-xl" />)}
+              </div>
+            ) : enquiriesList.length === 0 ? (
+              <div className="text-center py-24 text-muted-foreground">
+                <Inbox className="w-14 h-14 mx-auto mb-4 opacity-20" />
+                <p className="font-semibold">No enquiries yet</p>
+                <p className="text-sm mt-1">Submissions from the contact form will appear here.</p>
+              </div>
+            ) : (() => {
+              const filtered = enquiriesList.filter(e =>
+                enquiriesFilter === "all"    ? true :
+                enquiriesFilter === "unread" ? !e.isRead :
+                e.isRead
+              );
+              if (filtered.length === 0) return (
+                <div className="text-center py-16 text-muted-foreground">
+                  <MailOpen className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                  <p className="text-sm">No {enquiriesFilter} enquiries.</p>
+                </div>
+              );
+              return (
+                <div className="space-y-4">
+                  {filtered.map(enq => {
+                    const isExpanded = expandedEnquiry === enq.id;
+                    const typeColors: Record<string, string> = {
+                      "Job Seeker — I'm looking for work": "bg-blue-100 text-blue-700",
+                      "Employer — I'm looking to hire": "bg-green-100 text-green-700",
+                      "Visa / Work Permit Support": "bg-purple-100 text-purple-700",
+                      "Application Status": "bg-orange-100 text-orange-700",
+                      "Partnership Enquiry": "bg-teal-100 text-teal-700",
+                      "Media / Press": "bg-pink-100 text-pink-700",
+                    };
+                    const badgeColor = typeColors[enq.enquiryType] ?? "bg-gray-100 text-gray-600";
+
+                    return (
+                      <Card
+                        key={enq.id}
+                        className={`rounded-xl border transition-all ${!enq.isRead ? "border-primary/40 shadow-md bg-primary/[0.02]" : "border-border shadow-sm"}`}
+                      >
+                        <CardContent className="p-0">
+                          {/* Card header row */}
+                          <div
+                            className="flex items-start gap-4 p-5 cursor-pointer"
+                            onClick={() => {
+                              setExpandedEnquiry(isExpanded ? null : enq.id);
+                              if (!enq.isRead) markEnquiryRead(enq.id);
+                            }}
+                          >
+                            {/* Unread dot */}
+                            <div className="pt-1 shrink-0">
+                              {!enq.isRead ? (
+                                <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                              ) : (
+                                <div className="w-2.5 h-2.5 rounded-full bg-transparent border border-gray-300" />
+                              )}
+                            </div>
+
+                            {/* Avatar initial */}
+                            <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm shrink-0">
+                              {enq.fullName?.charAt(0)?.toUpperCase() ?? "?"}
+                            </div>
+
+                            {/* Main info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <span className={`font-semibold text-foreground ${!enq.isRead ? "text-primary" : ""}`}>
+                                  {enq.fullName}
+                                </span>
+                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${badgeColor}`}>
+                                  {enq.enquiryType}
+                                </span>
+                                {!enq.isRead && (
+                                  <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">NEW</span>
+                                )}
+                              </div>
+                              <p className="text-sm font-medium text-foreground truncate">{enq.subject}</p>
+                              <div className="flex flex-wrap gap-3 mt-1.5 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{enq.email}</span>
+                                {enq.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{enq.phone}</span>}
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {new Date(enq.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Expand chevron */}
+                            <div className="text-muted-foreground shrink-0 mt-1">
+                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </div>
+                          </div>
+
+                          {/* Expanded message */}
+                          {isExpanded && (
+                            <div className="border-t border-border px-5 pb-5 pt-4">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+                                {[
+                                  { label: "Full Name", value: enq.fullName, icon: <Users className="w-3.5 h-3.5" /> },
+                                  { label: "Email Address", value: enq.email, icon: <Mail className="w-3.5 h-3.5" /> },
+                                  { label: "Phone Number", value: enq.phone || "—", icon: <Phone className="w-3.5 h-3.5" /> },
+                                  { label: "Nature of Enquiry", value: enq.enquiryType, icon: <Globe2 className="w-3.5 h-3.5" /> },
+                                  { label: "Subject", value: enq.subject, icon: <FileText className="w-3.5 h-3.5" /> },
+                                  { label: "Received", value: new Date(enq.createdAt).toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" }), icon: <Clock className="w-3.5 h-3.5" /> },
+                                ].map(({ label, value, icon }) => (
+                                  <div key={label} className="bg-muted/40 rounded-lg px-4 py-3">
+                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">
+                                      {icon}{label}
+                                    </div>
+                                    <p className="text-sm text-foreground font-medium break-words">{value}</p>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Message box */}
+                              <div className="bg-white border border-border rounded-xl p-5 mb-5">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                  <MessageSquare className="w-3.5 h-3.5" /> Message
+                                </p>
+                                <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{enq.message}</p>
+                              </div>
+
+                              {/* Actions */}
+                              <div className="flex flex-wrap gap-3 pt-1">
+                                <a
+                                  href={`mailto:${enq.email}?subject=Re: ${encodeURIComponent(enq.subject)}&body=Dear ${encodeURIComponent(enq.fullName)},%0A%0AThank you for contacting Bluestar Alliance.%0A%0A`}
+                                  className="inline-flex items-center gap-2 bg-primary text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+                                >
+                                  <Mail className="w-4 h-4" /> Reply via Email
+                                </a>
+                                {!enq.isRead && (
+                                  <button
+                                    onClick={() => markEnquiryRead(enq.id)}
+                                    className="inline-flex items-center gap-2 border border-border text-sm font-medium px-4 py-2 rounded-lg hover:bg-muted/50 transition-colors text-foreground"
+                                  >
+                                    <MailOpen className="w-4 h-4" /> Mark as Read
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => deleteEnquiry(enq.id)}
+                                  disabled={deletingEnquiry === enq.id}
+                                  className="inline-flex items-center gap-2 border border-red-200 text-red-600 text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  {deletingEnquiry === enq.id ? "Deleting…" : "Delete"}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         )}
 

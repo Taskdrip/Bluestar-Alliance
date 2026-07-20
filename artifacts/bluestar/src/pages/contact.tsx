@@ -1,10 +1,10 @@
-import { Mail, MapPin, Phone, Clock, Facebook, Send } from "lucide-react";
+import { useState } from "react";
+import { Mail, MapPin, Phone, Clock, Facebook, Send, CheckCircle2, AlertCircle } from "lucide-react";
 import contactOffice from "@/assets/contact-office.png";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
 
 const offices = [
   {
@@ -55,12 +55,59 @@ const inquiryTypes = [
   "Media / Press",
 ];
 
-export default function Contact() {
-  const [submitted, setSubmitted] = useState(false);
+type FormState = {
+  fullName: string;
+  email: string;
+  phone: string;
+  enquiryType: string;
+  subject: string;
+  message: string;
+  consent: boolean;
+};
 
-  const handleSubmit = (e: React.FormEvent) => {
+const EMPTY: FormState = {
+  fullName: "", email: "", phone: "", enquiryType: "",
+  subject: "", message: "", consent: false,
+};
+
+export default function Contact() {
+  const [form, setForm]       = useState<FormState>(EMPTY);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted]   = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const set = (k: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+    setForm(p => ({ ...p, [k]: e.target.value }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    if (!form.consent) { setSubmitError("Please accept the privacy policy consent to proceed."); return; }
+    setSubmitError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/enquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName:    form.fullName,
+          email:       form.email,
+          phone:       form.phone || undefined,
+          enquiryType: form.enquiryType,
+          subject:     form.subject,
+          message:     form.message,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any).error || "Submission failed");
+      }
+      setSubmitted(true);
+      setForm(EMPTY);
+    } catch (err: any) {
+      setSubmitError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -179,46 +226,72 @@ export default function Contact() {
             <Card className="rounded-xl border-border shadow-md">
               <CardContent className="p-8 md:p-12">
                 {submitted ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
-                      <Send className="w-8 h-8 text-green-600" />
+                  /* ── Thank-you screen ── */
+                  <div className="text-center py-10">
+                    <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <CheckCircle2 className="w-10 h-10 text-green-600" />
                     </div>
-                    <h3 className="font-serif text-2xl font-bold text-primary mb-3">Message Received</h3>
-                    <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
-                      Thank you for reaching out. A member of our team will respond to your enquiry within one business day.
+                    <h3 className="font-serif text-3xl font-bold text-primary mb-3">Thank You, {form.fullName || "there"}!</h3>
+                    <p className="text-muted-foreground leading-relaxed max-w-md mx-auto mb-6">
+                      Your enquiry has been received by our team. A Bluestar Alliance specialist will review your message and get back to you at <strong className="text-foreground">{form.email || "your email address"}</strong> within <strong className="text-foreground">one business day</strong>.
                     </p>
-                    <button
-                      onClick={() => setSubmitted(false)}
-                      className="mt-8 text-sm text-primary underline hover:no-underline"
-                    >
-                      Send another message
-                    </button>
+                    <div className="bg-primary/5 border border-primary/15 rounded-xl p-5 max-w-sm mx-auto text-left mb-8 space-y-2.5">
+                      <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-3">What happens next</p>
+                      {[
+                        "Your enquiry is logged and assigned to the right specialist.",
+                        "We review every message personally — no bots, no auto-replies.",
+                        "You'll receive a tailored response within one business day.",
+                      ].map((s, i) => (
+                        <div key={i} className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                          <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                          {s}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <Button onClick={() => setSubmitted(false)} variant="outline">
+                        Send Another Enquiry
+                      </Button>
+                      <Button asChild>
+                        <a href="/jobs">Browse Open Roles</a>
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <>
                     <h2 className="font-serif text-3xl font-bold text-primary mb-2">Send an Enquiry</h2>
                     <p className="text-muted-foreground mb-8 text-sm">All fields marked * are required. We respond within one business day.</p>
+
+                    {submitError && (
+                      <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-6 text-sm text-red-700">
+                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                        {submitError}
+                      </div>
+                    )}
+
                     <form className="space-y-6" onSubmit={handleSubmit}>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <label htmlFor="contact-name" className="text-sm font-medium">Full Name *</label>
-                          <Input id="contact-name" placeholder="John Doe" required />
+                          <Input id="contact-name" placeholder="John Doe" required value={form.fullName} onChange={set("fullName")} />
                         </div>
                         <div className="space-y-2">
                           <label htmlFor="contact-email" className="text-sm font-medium">Email Address *</label>
-                          <Input id="contact-email" type="email" placeholder="john@example.com" required />
+                          <Input id="contact-email" type="email" placeholder="you@example.com" required value={form.email} onChange={set("email")} />
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <label htmlFor="contact-phone" className="text-sm font-medium">Phone Number</label>
-                          <Input id="contact-phone" type="tel" placeholder="+1 555 000 0000" />
+                          <Input id="contact-phone" type="tel" placeholder="+1 555 000 0000" value={form.phone} onChange={set("phone")} />
                         </div>
                         <div className="space-y-2">
                           <label htmlFor="contact-type" className="text-sm font-medium">Nature of Enquiry *</label>
                           <select
                             id="contact-type"
                             required
+                            value={form.enquiryType}
+                            onChange={set("enquiryType")}
                             className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
                             <option value="">Select enquiry type…</option>
@@ -230,7 +303,7 @@ export default function Contact() {
                       </div>
                       <div className="space-y-2">
                         <label htmlFor="contact-subject" className="text-sm font-medium">Subject *</label>
-                        <Input id="contact-subject" placeholder="Brief subject line" required />
+                        <Input id="contact-subject" placeholder="Brief subject line" required value={form.subject} onChange={set("subject")} />
                       </div>
                       <div className="space-y-2">
                         <label htmlFor="contact-message" className="text-sm font-medium">Message *</label>
@@ -239,16 +312,32 @@ export default function Contact() {
                           placeholder="Please give us as much context as possible so we can connect you with the right consultant…"
                           className="min-h-[180px]"
                           required
+                          value={form.message}
+                          onChange={set("message")}
                         />
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <input type="checkbox" id="consent" required className="rounded" />
+                        <input
+                          type="checkbox"
+                          id="consent"
+                          required
+                          checked={form.consent}
+                          onChange={e => setForm(p => ({ ...p, consent: e.target.checked }))}
+                          className="rounded"
+                        />
                         <label htmlFor="consent">
                           I consent to Bluestar Alliance storing my details in order to respond to this enquiry. View our privacy policy.
                         </label>
                       </div>
-                      <Button type="submit" size="lg" className="w-full md:w-auto px-10">
-                        Send Enquiry
+                      <Button type="submit" size="lg" className="w-full md:w-auto px-10" disabled={submitting}>
+                        {submitting ? (
+                          <span className="flex items-center gap-2">
+                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Sending…
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-2"><Send className="w-4 h-4" /> Send Enquiry</span>
+                        )}
                       </Button>
                     </form>
                   </>

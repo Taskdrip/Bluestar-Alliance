@@ -17,6 +17,7 @@ function ScrollToTop() {
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import AnnouncementPopup from "@/components/AnnouncementPopup";
+import ChatWidget from "@/components/ChatWidget";
 import Home from "@/pages/home";
 import Jobs from "@/pages/jobs";
 import Apply from "@/pages/apply";
@@ -68,6 +69,7 @@ function App() {
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <Router />
           <AnnouncementPopup />
+          <ChatWidget />
         </WouterRouter>
         <Toaster />
       </TooltipProvider>
