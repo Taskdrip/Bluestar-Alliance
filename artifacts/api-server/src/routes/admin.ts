@@ -138,6 +138,24 @@ router.patch("/applications/:id/status", async (req, res) => {
   res.json(serializeApp(updated));
 });
 
+router.delete("/applications/:id", async (req, res) => {
+  const auth = await requireAdmin(req, res);
+  if (!auth) return;
+
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const [app] = await db.select().from(applicationsTable).where(eq(applicationsTable.id, id));
+  if (!app) { res.status(404).json({ error: "Application not found" }); return; }
+
+  // Cascade: messages → addon_orders → application → notification cleanup
+  await db.delete(messagesTable).where(eq(messagesTable.applicationId, id)).catch(() => {});
+  await db.delete(addonOrdersTable).where(eq(addonOrdersTable.applicationId, id)).catch(() => {});
+  await db.delete(applicationsTable).where(eq(applicationsTable.id, id));
+
+  res.json({ success: true });
+});
+
 // ─── Jobs ────────────────────────────────────────────────────────────────────
 
 router.get("/jobs", async (req, res) => {

@@ -15,6 +15,7 @@ import {
   useCreateJob,
   useUpdateJob,
   useDeleteJob,
+  getListTestimonialsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -50,6 +51,8 @@ export default function Admin() {
   // Applications state
   const [statusFilter, setStatusFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [deleteAppModal, setDeleteAppModal] = useState<{ open: boolean; app: any | null }>({ open: false, app: null });
+  const [deletingApp, setDeletingApp] = useState(false);
 
   // Jobs state
   const [jobModalOpen, setJobModalOpen] = useState(false);
@@ -320,6 +323,27 @@ export default function Admin() {
     });
   };
 
+  const handleDeleteApplication = async () => {
+    if (!deleteAppModal.app) return;
+    setDeletingApp(true);
+    try {
+      await fetch(`/api/admin/applications/${deleteAppModal.app.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      queryClient.setQueryData(
+        getListApplicationsQueryKey({
+          status: statusFilter !== "all" ? statusFilter : undefined,
+          role: roleFilter !== "all" ? roleFilter : undefined,
+        }),
+        (old: any) => old ? old.filter((a: any) => a.id !== deleteAppModal.app.id) : old
+      );
+      queryClient.invalidateQueries({ queryKey: getGetStatsSummaryQueryKey() });
+      setDeleteAppModal({ open: false, app: null });
+    } catch {}
+    setDeletingApp(false);
+  };
+
   const openChatForApp = (app: any) => {
     setSelectedApp(app);
     setSelectedAppId(app.id);
@@ -477,6 +501,8 @@ export default function Admin() {
       } else {
         setTestimonialsList(prev => [...prev, data]);
       }
+      // Sync public Testimonials page
+      queryClient.invalidateQueries({ queryKey: getListTestimonialsQueryKey() });
       setTestimonialModalOpen(false);
     } catch {}
   };
@@ -486,6 +512,8 @@ export default function Admin() {
     try {
       await fetch(`/api/testimonials/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
       setTestimonialsList(prev => prev.filter(t => t.id !== id));
+      // Sync public Testimonials page
+      queryClient.invalidateQueries({ queryKey: getListTestimonialsQueryKey() });
     } catch {}
   };
 
@@ -749,6 +777,15 @@ export default function Admin() {
                                   <SelectItem value="rejected">Reject</SelectItem>
                                 </SelectContent>
                               </Select>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => setDeleteAppModal({ open: true, app })}
+                                title="Delete application"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -1656,6 +1693,38 @@ export default function Admin() {
         )}
 
       </div>
+
+      {/* Delete Application Confirmation Modal */}
+      {deleteAppModal.open && deleteAppModal.app && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-sm shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="font-serif text-lg font-bold text-destructive">Delete Application</h2>
+              <Button variant="ghost" size="sm" onClick={() => setDeleteAppModal({ open: false, app: null })}><X className="w-4 h-4" /></Button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex items-start gap-3 p-4 bg-destructive/5 border border-destructive/20 rounded-md">
+                <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-foreground text-sm">{deleteAppModal.app.fullName}</p>
+                  <p className="text-xs text-muted-foreground">{deleteAppModal.app.position} &bull; {deleteAppModal.app.email}</p>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                This will permanently delete the application along with all associated messages and add-on orders. <span className="font-semibold text-foreground">This cannot be undone.</span>
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 p-6 border-t">
+              <Button variant="outline" onClick={() => setDeleteAppModal({ open: false, app: null })} disabled={deletingApp}>Cancel</Button>
+              <Button variant="destructive" onClick={handleDeleteApplication} disabled={deletingApp}>
+                {deletingApp ? (
+                  <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Deleting…</span>
+                ) : "Delete Permanently"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Job Modal */}
       {jobModalOpen && (
