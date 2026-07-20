@@ -60,7 +60,7 @@ export default function Admin() {
   });
 
   // Chat state — Application threads
-  const [chatMode, setChatMode] = useState<"applications" | "users">("applications");
+  const [chatMode, setChatMode] = useState<"applications" | "users" | "broadcast">("applications");
   const [selectedAppId, setSelectedAppId] = useState<number | null>(null);
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
@@ -77,6 +77,11 @@ export default function Admin() {
   const [dmText, setDmText] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const dmEndRef = useRef<HTMLDivElement>(null);
+
+  // Chat state — Broadcast
+  const [broadcastText, setBroadcastText] = useState("");
+  const [broadcastSending, setBroadcastSending] = useState(false);
+  const [broadcastResult, setBroadcastResult] = useState<{ sent: number; failed: number; total: number } | null>(null);
 
   // Payment settings state
   const [paymentForm, setPaymentForm] = useState({
@@ -354,6 +359,25 @@ export default function Admin() {
       }
     } catch (_) {}
     setDmSending(false);
+  };
+
+  const handleBroadcast = async () => {
+    if (!broadcastText.trim() || broadcastSending) return;
+    setBroadcastSending(true);
+    setBroadcastResult(null);
+    try {
+      const res = await fetch("/api/direct-messages/broadcast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ content: broadcastText.trim(), senderName: "Bluestar HR Team" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBroadcastResult(data);
+        setBroadcastText("");
+      }
+    } catch (_) {}
+    setBroadcastSending(false);
   };
 
   const handleOpenJobModal = (job?: any) => {
@@ -800,7 +824,7 @@ export default function Admin() {
         {activeTab === "chat" && (
           <div className="space-y-4">
             {/* Mode toggle */}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setChatMode("applications")}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${chatMode === "applications" ? "bg-primary text-white border-primary" : "bg-background text-muted-foreground border-border hover:bg-muted/30"}`}
@@ -812,6 +836,12 @@ export default function Admin() {
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${chatMode === "users" ? "bg-primary text-white border-primary" : "bg-background text-muted-foreground border-border hover:bg-muted/30"}`}
               >
                 <span className="flex items-center gap-2"><Users className="w-4 h-4" /> All Users (Direct DM)</span>
+              </button>
+              <button
+                onClick={() => { setChatMode("broadcast"); setBroadcastResult(null); setBroadcastText(""); }}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${chatMode === "broadcast" ? "bg-accent text-accent-foreground border-accent" : "bg-background text-muted-foreground border-border hover:bg-muted/30"}`}
+              >
+                <span className="flex items-center gap-2"><Megaphone className="w-4 h-4" /> Broadcast All Users</span>
               </button>
             </div>
 
@@ -998,6 +1028,69 @@ export default function Admin() {
                       </div>
                     </div>
                   )}
+                </Card>
+              </div>
+            )}
+
+            {chatMode === "broadcast" && (
+              <div className="max-w-2xl space-y-5">
+                <div>
+                  <h3 className="font-serif text-xl font-bold text-primary">Broadcast Message</h3>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    Send a message to all registered users at once. Each user receives it as a direct message and an in-app notification.
+                  </p>
+                </div>
+
+                {broadcastResult && (
+                  <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-800">
+                    <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-semibold">Broadcast sent!</p>
+                      <p className="text-xs mt-0.5 text-green-700">
+                        Delivered to {broadcastResult.sent} of {broadcastResult.total} users
+                        {broadcastResult.failed > 0 ? ` (${broadcastResult.failed} failed)` : " successfully"}.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <Card>
+                  <CardContent className="pt-5 space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block">Message</Label>
+                      <Textarea
+                        value={broadcastText}
+                        onChange={e => setBroadcastText(e.target.value)}
+                        placeholder="Type your announcement or message to all users here…"
+                        className="min-h-[140px] resize-none"
+                        onKeyDown={e => {
+                          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                            e.preventDefault();
+                            handleBroadcast();
+                          }
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1.5">Press Ctrl+Enter to send · {broadcastText.length} characters</p>
+                    </div>
+                    <div className="bg-muted/40 border border-border rounded-md px-4 py-3 text-xs text-muted-foreground space-y-1">
+                      <p className="font-medium text-foreground text-sm">What happens when you broadcast:</p>
+                      <ul className="list-disc list-inside space-y-0.5 mt-1">
+                        <li>Every registered user gets a direct message from Bluestar HR Team</li>
+                        <li>Each user receives an in-app notification immediately</li>
+                        <li>Users with push notifications enabled will also receive a push alert</li>
+                      </ul>
+                    </div>
+                    <Button
+                      onClick={handleBroadcast}
+                      disabled={broadcastSending || !broadcastText.trim()}
+                      className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto gap-2"
+                    >
+                      {broadcastSending
+                        ? <><span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> Sending…</>
+                        : <><Megaphone className="w-4 h-4" /> Send to All Users</>
+                      }
+                    </Button>
+                  </CardContent>
                 </Card>
               </div>
             )}

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Trash2, Eye, X, KeyRound, ChevronDown, ChevronUp,
-  User, FileText, Phone, Mail, MapPin, Briefcase, Calendar, Search
+  User, FileText, Phone, Mail, MapPin, Briefcase, Calendar, Search, AlertTriangle
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -50,6 +50,7 @@ export default function UsersTab({ token }: UsersTabProps) {
   const [resetDoing, setResetDoing] = useState(false);
   const [resetResult, setResetResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ userId: number; name: string; appCount: number } | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -61,17 +62,19 @@ export default function UsersTab({ token }: UsersTabProps) {
       .finally(() => setLoading(false));
   }, [token]);
 
-  const handleDelete = async (id: number, name: string) => {
-    if (!window.confirm(`Delete user "${name}"? This will also delete all their applications. This cannot be undone.`)) return;
-    setDeletingId(id);
+  const handleDeleteConfirm = async () => {
+    if (!deleteModal) return;
+    const { userId } = deleteModal;
+    setDeletingId(userId);
+    setDeleteModal(null);
     try {
-      const res = await fetch(`/api/admin/users/${id}`, {
+      const res = await fetch(`/api/admin/users/${userId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        setUsers(prev => prev.filter(u => u.id !== id));
-        if (expandedUser === id) setExpandedUser(null);
+        setUsers(prev => prev.filter(u => u.id !== userId));
+        if (expandedUser === userId) setExpandedUser(null);
       } else {
         alert("Failed to delete user.");
       }
@@ -185,11 +188,14 @@ export default function UsersTab({ token }: UsersTabProps) {
                     size="sm"
                     variant="outline"
                     className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/5"
-                    onClick={() => handleDelete(user.id, user.fullName)}
+                    onClick={() => setDeleteModal({ userId: user.id, name: user.fullName, appCount: user.applications.length })}
                     disabled={deletingId === user.id || user.role === "superadmin"}
                     title={user.role === "superadmin" ? "Cannot delete super admin" : "Delete user"}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    {deletingId === user.id
+                      ? <span className="w-3.5 h-3.5 border-2 border-destructive border-t-transparent rounded-full animate-spin" />
+                      : <Trash2 className="w-3.5 h-3.5" />
+                    }
                   </Button>
                 </div>
               </div>
@@ -261,6 +267,49 @@ export default function UsersTab({ token }: UsersTabProps) {
               )}
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b">
+              <h2 className="font-semibold text-lg flex items-center gap-2 text-destructive">
+                <AlertTriangle className="w-5 h-5" />
+                Delete User
+              </h2>
+              <button onClick={() => setDeleteModal(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className="text-sm text-foreground">
+                Are you sure you want to delete <strong>{deleteModal.name}</strong>?
+              </p>
+              {deleteModal.appCount > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-md px-4 py-3 text-sm text-amber-800">
+                  <p className="font-medium mb-0.5">This will also permanently delete:</p>
+                  <ul className="list-disc list-inside text-xs space-y-0.5 mt-1">
+                    <li>{deleteModal.appCount} application{deleteModal.appCount !== 1 ? "s" : ""}</li>
+                    <li>All related messages and notifications</li>
+                    <li>All add-on orders</li>
+                  </ul>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">This action cannot be undone.</p>
+            </div>
+            <div className="flex justify-end gap-3 px-5 pb-5">
+              <Button variant="outline" onClick={() => setDeleteModal(null)}>Cancel</Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteConfirm}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Permanently
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 

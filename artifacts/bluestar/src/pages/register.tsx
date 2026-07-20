@@ -22,7 +22,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export default function Register() {
   const [, setLocation] = useLocation();
   const searchStr = useSearch();
-  const redirectTo = new URLSearchParams(searchStr).get("redirect") || "/";
+  const redirectTo = new URLSearchParams(searchStr).get("redirect") || "/dashboard";
   const queryClient = useQueryClient();
   const registerUser = useRegisterUser();
 

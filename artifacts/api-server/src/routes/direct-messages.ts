@@ -107,6 +107,65 @@ router.get("/", async (req, res) => {
 });
 
 /**
+ * POST /api/direct-messages/broadcast
+ * Admin only: send a message to ALL registered non-admin users at once
+ */
+router.post("/broadcast", async (req, res) => {
+  const payload = getPayload(req);
+  if (!payload) { res.status(401).json({ error: "Unauthorized" }); return; }
+  if (!isAdmin(payload.role)) { res.status(403).json({ error: "Admin access required" }); return; }
+
+  const { content, senderName } = req.body;
+  if (!content?.trim()) { res.status(400).json({ error: "content is required" }); return; }
+
+  const actualSenderName = senderName || "Bluestar HR Team";
+
+  // Get all non-admin users
+  const allUsers = await db.select({ email: usersTable.email }).from(usersTable)
+    .where(eq(usersTable.isDisabled, false));
+  const recipients = allUsers.filter(u => u.email !== "admin");
+
+  let sent = 0;
+  let failed = 0;
+
+  await Promise.allSettled(
+    recipients.map(async (user) => {
+      try {
+        await db.insert(directMessagesTable).values({
+          userEmail: user.email,
+          senderRole: "admin",
+          senderName: actualSenderName,
+          content: content.trim(),
+          isRead: false,
+        });
+
+        await db.insert(notificationsTable).values({
+          recipientEmail: user.email,
+          recipientRole: "candidate",
+          message: `Announcement from Bluestar Alliance: ${content.trim().slice(0, 100)}`,
+          type: "message",
+          relatedId: null,
+          isRead: false,
+        }).catch(() => {});
+
+        await tryPush(user.email, {
+          title: "Announcement — Bluestar Alliance",
+          body: content.trim().slice(0, 120),
+          url: "/dashboard",
+          tag: `broadcast-${Date.now()}`,
+        });
+
+        sent++;
+      } catch {
+        failed++;
+      }
+    })
+  );
+
+  res.status(201).json({ sent, failed, total: recipients.length });
+});
+
+/**
  * GET /api/direct-messages/:email
  * Admin only: get full DM thread for a specific user
  */
