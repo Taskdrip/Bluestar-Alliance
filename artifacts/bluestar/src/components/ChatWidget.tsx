@@ -242,6 +242,21 @@ export default function ChatWidget() {
   const token = localStorage.getItem("bluestar_token");
   const isLoggedIn = !!currentUser;
 
+  // When a logged-in session ends, wipe any residual guest identity stored in
+  // localStorage so the next visitor (or the same person as a guest) starts
+  // with a fresh GuestForm instead of seeing the old account's thread.
+  const wasLoggedIn = useRef(false);
+  useEffect(() => {
+    if (wasLoggedIn.current && !isLoggedIn) {
+      // Transition: logged-in → logged-out
+      localStorage.removeItem(GUEST_EMAIL_KEY);
+      localStorage.removeItem(GUEST_NAME_KEY);
+      setGuestEmail(null);
+      setGuestName(null);
+    }
+    wasLoggedIn.current = isLoggedIn;
+  }, [isLoggedIn]);
+
   // Poll unread count from admin messages
   useEffect(() => {
     const email = isLoggedIn ? currentUser?.email : guestEmail;

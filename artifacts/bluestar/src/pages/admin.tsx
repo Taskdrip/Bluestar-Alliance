@@ -325,62 +325,66 @@ export default function Admin() {
   // Merges /api/admin/users (registered accounts) with /api/direct-messages
   // (all threads, including guests) so the admin can message anyone who has
   // ever contacted them AND initiate with any registered user.
+  // Polls every 15 s so new guest senders appear automatically.
   useEffect(() => {
     if (chatMode !== "users" || !token) return;
-    setUsersLoading(true);
 
-    Promise.all([
-      fetch("/api/admin/users",       { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
-      fetch("/api/direct-messages",   { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
-    ])
-      .then(([registeredUsers, dmThreads]: [any[], any[]]) => {
-        // Build a lookup of DM thread data keyed by lowercased email
-        const threadMap: Record<string, any> = {};
-        for (const t of dmThreads) {
-          threadMap[(t.userEmail ?? "").toLowerCase()] = t;
+    const buildAndSet = (registeredUsers: any[], dmThreads: any[]) => {
+      const threadMap: Record<string, any> = {};
+      for (const t of dmThreads) {
+        threadMap[(t.userEmail ?? "").toLowerCase()] = t;
+      }
+
+      const merged: any[] = registeredUsers.map(u => ({
+        ...u,
+        unread:      threadMap[u.email.toLowerCase()]?.unread      ?? 0,
+        total:       threadMap[u.email.toLowerCase()]?.total       ?? 0,
+        lastMessage: threadMap[u.email.toLowerCase()]?.lastMessage ?? null,
+        isRegistered: true,
+      }));
+
+      const registeredEmails = new Set(registeredUsers.map((u: any) => u.email.toLowerCase()));
+      for (const t of dmThreads) {
+        const lc = (t.userEmail ?? "").toLowerCase();
+        if (!registeredEmails.has(lc)) {
+          merged.push({
+            id: null,
+            email: t.userEmail,
+            fullName: t.userName,
+            applications: [],
+            unread: t.unread,
+            total:  t.total,
+            lastMessage: t.lastMessage,
+            isRegistered: false,
+          });
         }
+      }
 
-        // Start with all registered users (correct shape: .email, .fullName, .applications)
-        const merged: any[] = registeredUsers.map(u => ({
-          ...u,
-          // Attach DM thread info if it exists
-          unread: threadMap[u.email.toLowerCase()]?.unread ?? 0,
-          total:  threadMap[u.email.toLowerCase()]?.total  ?? 0,
-          lastMessage: threadMap[u.email.toLowerCase()]?.lastMessage ?? null,
-          isRegistered: true,
-        }));
+      merged.sort((a, b) => {
+        if (b.unread !== a.unread) return b.unread - a.unread;
+        const ta = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0;
+        const tb = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : 0;
+        if (tb !== ta) return tb - ta;
+        return (a.fullName ?? "").localeCompare(b.fullName ?? "");
+      });
 
-        // Add guest/unregistered chatters who have DMs but no account
-        const registeredEmails = new Set(registeredUsers.map((u: any) => u.email.toLowerCase()));
-        for (const t of dmThreads) {
-          const lc = (t.userEmail ?? "").toLowerCase();
-          if (!registeredEmails.has(lc)) {
-            merged.push({
-              id: null,
-              email: t.userEmail,
-              fullName: t.userName,     // senderName they typed in the widget
-              applications: [],
-              unread: t.unread,
-              total: t.total,
-              lastMessage: t.lastMessage,
-              isRegistered: false,
-            });
-          }
-        }
+      setAllUsers(merged);
+    };
 
-        // Sort: unread first, then by last-message time (or name if no messages)
-        merged.sort((a, b) => {
-          if (b.unread !== a.unread) return b.unread - a.unread;
-          const ta = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0;
-          const tb = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : 0;
-          if (tb !== ta) return tb - ta;
-          return (a.fullName ?? "").localeCompare(b.fullName ?? "");
-        });
+    const load = (isFirst: boolean) => {
+      if (isFirst) setUsersLoading(true);
+      Promise.all([
+        fetch("/api/admin/users",     { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
+        fetch("/api/direct-messages", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
+      ])
+        .then(([reg, dms]: [any[], any[]]) => buildAndSet(reg, dms))
+        .catch(() => {})
+        .finally(() => { if (isFirst) setUsersLoading(false); });
+    };
 
-        setAllUsers(merged);
-      })
-      .catch(() => {})
-      .finally(() => setUsersLoading(false));
+    load(true);
+    const iv = setInterval(() => load(false), 15000);
+    return () => clearInterval(iv);
   }, [chatMode, token]);
 
   // Poll DMs for selected user
