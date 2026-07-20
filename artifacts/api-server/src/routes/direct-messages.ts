@@ -76,12 +76,17 @@ router.get("/", async (req, res) => {
       if (!byEmail[m.userEmail]) byEmail[m.userEmail] = [];
       byEmail[m.userEmail].push(m);
     }
-    const threads = Object.entries(byEmail).map(([email, msgs]) => ({
-      userEmail: email,
-      lastMessage: serialize(msgs[msgs.length - 1]),
-      unread: msgs.filter(m => m.senderRole === "user" && !m.isRead).length,
-      total: msgs.length,
-    }));
+    const threads = Object.entries(byEmail).map(([email, msgs]) => {
+      // Find the display name from any user-side message in the thread
+      const userMsg = msgs.find(m => m.senderRole === "user");
+      return {
+        userEmail: email,
+        userName: userMsg?.senderName ?? email,
+        lastMessage: serialize(msgs[msgs.length - 1]),
+        unread: msgs.filter(m => m.senderRole === "user" && !m.isRead).length,
+        total: msgs.length,
+      };
+    });
     res.json(threads);
     return;
   }

@@ -298,13 +298,21 @@ export default function Admin() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Load all users when switching to users DM mode
+  // Load DM threads when switching to users DM mode
+  // Uses /api/direct-messages which returns ALL threads (registered + guest widget users)
   useEffect(() => {
     if (chatMode !== "users" || !token) return;
     setUsersLoading(true);
-    fetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } })
+    fetch("/api/direct-messages", { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : [])
-      .then(data => setAllUsers(data.filter((u: any) => u.role === "user")))
+      .then(data => {
+        // Sort newest-first by lastMessage.createdAt, unread threads first
+        const sorted = [...data].sort((a: any, b: any) => {
+          if (b.unread !== a.unread) return b.unread - a.unread;
+          return new Date(b.lastMessage.createdAt).getTime() - new Date(a.lastMessage.createdAt).getTime();
+        });
+        setAllUsers(sorted);
+      })
       .catch(() => {})
       .finally(() => setUsersLoading(false));
   }, [chatMode, token]);
