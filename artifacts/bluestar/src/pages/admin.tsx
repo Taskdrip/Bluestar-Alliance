@@ -307,20 +307,63 @@ export default function Admin() {
     prevMsgCountRef.current = messages.length;
   }, [messages]);
 
-  // Load DM threads when switching to users DM mode
-  // Uses /api/direct-messages which returns ALL threads (registered + guest widget users)
+  // Load users list when switching to Users DM mode.
+  // Merges /api/admin/users (registered accounts) with /api/direct-messages
+  // (all threads, including guests) so the admin can message anyone who has
+  // ever contacted them AND initiate with any registered user.
   useEffect(() => {
     if (chatMode !== "users" || !token) return;
     setUsersLoading(true);
-    fetch("/api/direct-messages", { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.ok ? r.json() : [])
-      .then(data => {
-        // Sort newest-first by lastMessage.createdAt, unread threads first
-        const sorted = [...data].sort((a: any, b: any) => {
+
+    Promise.all([
+      fetch("/api/admin/users",       { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
+      fetch("/api/direct-messages",   { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
+    ])
+      .then(([registeredUsers, dmThreads]: [any[], any[]]) => {
+        // Build a lookup of DM thread data keyed by lowercased email
+        const threadMap: Record<string, any> = {};
+        for (const t of dmThreads) {
+          threadMap[(t.userEmail ?? "").toLowerCase()] = t;
+        }
+
+        // Start with all registered users (correct shape: .email, .fullName, .applications)
+        const merged: any[] = registeredUsers.map(u => ({
+          ...u,
+          // Attach DM thread info if it exists
+          unread: threadMap[u.email.toLowerCase()]?.unread ?? 0,
+          total:  threadMap[u.email.toLowerCase()]?.total  ?? 0,
+          lastMessage: threadMap[u.email.toLowerCase()]?.lastMessage ?? null,
+          isRegistered: true,
+        }));
+
+        // Add guest/unregistered chatters who have DMs but no account
+        const registeredEmails = new Set(registeredUsers.map((u: any) => u.email.toLowerCase()));
+        for (const t of dmThreads) {
+          const lc = (t.userEmail ?? "").toLowerCase();
+          if (!registeredEmails.has(lc)) {
+            merged.push({
+              id: null,
+              email: t.userEmail,
+              fullName: t.userName,     // senderName they typed in the widget
+              applications: [],
+              unread: t.unread,
+              total: t.total,
+              lastMessage: t.lastMessage,
+              isRegistered: false,
+            });
+          }
+        }
+
+        // Sort: unread first, then by last-message time (or name if no messages)
+        merged.sort((a, b) => {
           if (b.unread !== a.unread) return b.unread - a.unread;
-          return new Date(b.lastMessage.createdAt).getTime() - new Date(a.lastMessage.createdAt).getTime();
+          const ta = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0;
+          const tb = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : 0;
+          if (tb !== ta) return tb - ta;
+          return (a.fullName ?? "").localeCompare(b.fullName ?? "");
         });
-        setAllUsers(sorted);
+
+        setAllUsers(merged);
       })
       .catch(() => {})
       .finally(() => setUsersLoading(false));
@@ -1043,24 +1086,37 @@ export default function Admin() {
                       <div className="p-4 space-y-3">{[1,2,3,4].map(i => <Skeleton key={i} className="h-14 w-full" />)}</div>
                     ) : allUsers.filter(u => !userSearch || u.fullName?.toLowerCase().includes(userSearch.toLowerCase()) || u.email?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
                       <button
-                        key={u.id}
+                        key={u.id ?? u.email}
                         onClick={() => { setSelectedUserEmail(u.email); setDmMessages([]); }}
                         className={`w-full text-left px-4 py-3 border-b border-border hover:bg-muted/30 transition-colors ${selectedUserEmail === u.email ? "bg-primary/5 border-l-2 border-l-primary" : ""}`}
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0">
-                            {u.fullName?.charAt(0)?.toUpperCase() ?? "?"}
+                          <div className="relative w-7 h-7 shrink-0">
+                            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
+                              {u.fullName?.charAt(0)?.toUpperCase() ?? "?"}
+                            </div>
+                            {u.unread > 0 && (
+                              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                                {u.unread > 9 ? "9+" : u.unread}
+                              </span>
+                            )}
                           </div>
-                          <div className="min-w-0">
-                            <div className="font-medium text-sm text-foreground truncate">{u.fullName}</div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium text-sm text-foreground truncate">{u.fullName ?? u.email}</span>
+                              {!u.isRegistered && <span className="text-[9px] bg-amber-100 text-amber-700 px-1 rounded shrink-0">Guest</span>}
+                            </div>
                             <div className="text-xs text-muted-foreground truncate">{u.email}</div>
-                            <div className="text-[10px] text-muted-foreground">{u.applications?.length ?? 0} application{u.applications?.length !== 1 ? "s" : ""}</div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {u.applications?.length ?? 0} application{u.applications?.length !== 1 ? "s" : ""}
+                              {u.total > 0 && <span className="ml-1 opacity-60">· {u.total} msg{u.total !== 1 ? "s" : ""}</span>}
+                            </div>
                           </div>
                         </div>
                       </button>
                     ))}
                     {!usersLoading && allUsers.length === 0 && (
-                      <div className="p-6 text-center text-muted-foreground text-sm">No users registered yet</div>
+                      <div className="p-6 text-center text-muted-foreground text-sm">No users or messages yet</div>
                     )}
                   </div>
                 </Card>
@@ -1070,18 +1126,28 @@ export default function Admin() {
                   {selectedUserEmail ? (
                     <>
                       <CardHeader className="pb-3 border-b flex-row items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
-                          {(allUsers.find(u => u.email === selectedUserEmail)?.fullName ?? "U").charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="text-base font-semibold truncate">
-                            {allUsers.find(u => u.email === selectedUserEmail)?.fullName ?? selectedUserEmail}
-                          </CardTitle>
-                          <CardDescription className="text-xs truncate">{selectedUserEmail}</CardDescription>
-                        </div>
-                        <Badge variant="outline" className="text-xs shrink-0">
-                          {allUsers.find(u => u.email === selectedUserEmail)?.applications?.length ?? 0} apps
-                        </Badge>
+                        {(() => {
+                          const su = allUsers.find(u => u.email === selectedUserEmail);
+                          return (
+                            <>
+                              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
+                                {(su?.fullName ?? selectedUserEmail ?? "U").charAt(0).toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <CardTitle className="text-base font-semibold truncate flex items-center gap-2">
+                                  {su?.fullName ?? selectedUserEmail}
+                                  {su && !su.isRegistered && (
+                                    <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-normal">Guest</span>
+                                  )}
+                                </CardTitle>
+                                <CardDescription className="text-xs truncate">{selectedUserEmail}</CardDescription>
+                              </div>
+                              <Badge variant="outline" className="text-xs shrink-0">
+                                {su?.applications?.length ?? 0} apps
+                              </Badge>
+                            </>
+                          );
+                        })()}
                       </CardHeader>
                       <div ref={dmContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
                         {dmMessages.length === 0 ? (

@@ -69,19 +69,33 @@ router.get("/", async (req, res) => {
   if (!payload) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   if (isAdmin(payload.role)) {
-    // Return distinct user emails with last message preview
-    const all = await db.select().from(directMessagesTable).orderBy(directMessagesTable.createdAt);
+    // Return distinct user emails with last message preview, enriched with
+    // the registered user's fullName where available.
+    const [all, registeredUsers] = await Promise.all([
+      db.select().from(directMessagesTable).orderBy(directMessagesTable.createdAt),
+      db.select().from(usersTable),
+    ]);
+
+    // Build a fast lookup: lowercase email → registered user row
+    const profileMap: Record<string, typeof registeredUsers[0]> = {};
+    for (const u of registeredUsers) {
+      profileMap[u.email.toLowerCase()] = u;
+    }
+
     const byEmail: Record<string, any[]> = {};
     for (const m of all) {
       if (!byEmail[m.userEmail]) byEmail[m.userEmail] = [];
       byEmail[m.userEmail].push(m);
     }
+
     const threads = Object.entries(byEmail).map(([email, msgs]) => {
-      // Find the display name from any user-side message in the thread
       const userMsg = msgs.find(m => m.senderRole === "user");
+      const profile = profileMap[email.toLowerCase()];
       return {
         userEmail: email,
-        userName: userMsg?.senderName ?? email,
+        // Prefer the registered user's name; fall back to the name they typed
+        userName: profile?.fullName ?? userMsg?.senderName ?? email,
+        isRegistered: !!profile,
         lastMessage: serialize(msgs[msgs.length - 1]),
         unread: msgs.filter(m => m.senderRole === "user" && !m.isRead).length,
         total: msgs.length,
