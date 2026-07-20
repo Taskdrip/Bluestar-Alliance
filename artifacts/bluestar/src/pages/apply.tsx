@@ -459,11 +459,15 @@ function AuthPanel({ onAuth }: { onAuth: (name: string, email: string) => void }
 // ─── Main Apply Page ─────────────────────────────────────────────────────────
 
 export default function Apply() {
-  const hasToken = !!localStorage.getItem("bluestar_token");
+  // hasToken must be state so it updates reactively when the user registers inline
+  const [hasToken, setHasToken] = useState(!!localStorage.getItem("bluestar_token"));
+  // inlineAuthed lets the form appear immediately — before the async query resolves
+  const [inlineAuthed, setInlineAuthed] = useState(false);
+
   const { data: currentUser, isLoading: authLoading, isError: authError } = useGetCurrentUser({
     query: { enabled: hasToken },
   });
-  const isAuthenticated = !!currentUser;
+  const isAuthenticated = !!currentUser || inlineAuthed;
 
   const [isSuccess, setIsSuccess] = useState(false);
   const [isPayLaterSuccess, setIsPayLaterSuccess] = useState(false);
@@ -549,6 +553,10 @@ export default function Apply() {
 
   // Called right after inline auth succeeds (before the query re-fetches)
   function handleInlineAuth(name: string, email: string) {
+    // Flip hasToken so useGetCurrentUser becomes enabled and fetches the full profile
+    setHasToken(true);
+    // Show the form immediately — don't wait for the query to resolve
+    setInlineAuthed(true);
     if (name) form.setValue("fullName", name, { shouldValidate: true });
     if (email) form.setValue("email", email, { shouldValidate: true });
   }
@@ -752,13 +760,26 @@ export default function Apply() {
             <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
               <CheckCircle2 className="w-10 h-10 text-green-600" />
             </div>
-            <h2 className="font-serif text-3xl font-bold text-primary mb-4">Application Received</h2>
-            <p className="text-lg text-muted-foreground mb-8 leading-relaxed max-w-xl mx-auto">
-              Your application has been successfully submitted. With over 18 years of recruitment excellence, our HR team carefully reviews every application and will contact shortlisted candidates.
+            <h2 className="font-serif text-3xl font-bold text-primary mb-4">Welcome to Bluestar Alliance!</h2>
+            <p className="text-lg text-muted-foreground mb-6 leading-relaxed max-w-xl mx-auto">
+              Congratulations — your application is in! Our HR specialists will review your profile within 3–7 business days. Track your status and chat with HR any time from your portal.
             </p>
-            <Button onClick={() => setLocation("/")} variant="outline" className="min-w-[200px]">
-              Return to Homepage
-            </Button>
+            <div className="w-full bg-primary/5 border border-primary/20 rounded-sm p-5 mb-8 text-left space-y-3">
+              <p className="font-semibold text-primary text-sm">What to expect next:</p>
+              <ul className="text-sm text-muted-foreground space-y-2">
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" /><span>Our HR team reviews every application carefully within <strong className="text-foreground">3–7 business days</strong>.</span></li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" /><span>Status updates and messages from HR will appear in your <strong className="text-foreground">My Portal</strong> — check it anytime.</span></li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" /><span>You can also send HR a direct message from your portal if you have questions.</span></li>
+              </ul>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
+              <Button onClick={() => setLocation("/dashboard")} className="bg-primary hover:bg-primary/90 min-w-[180px]">
+                View My Portal
+              </Button>
+              <Button onClick={() => setLocation("/")} variant="outline" className="min-w-[180px]">
+                Back to Homepage
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -913,7 +934,7 @@ export default function Apply() {
         </div>
 
         {/* ── Auth gate ── */}
-        {authLoading && !authError ? (
+        {authLoading && !authError && !inlineAuthed ? (
           <div className="flex items-center justify-center py-16">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>

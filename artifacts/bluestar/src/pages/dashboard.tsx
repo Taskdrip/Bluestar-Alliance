@@ -161,7 +161,7 @@ function ChatThread({ app, user, token }: { app: Application; user: any; token: 
       .then((d: Message[]) => { setMessages(d); setLoading(false); })
       .catch(() => setLoading(false));
 
-  useEffect(() => { load(); const iv = setInterval(load, 8000); return () => clearInterval(iv); }, [app.id]);
+  useEffect(() => { load(); const iv = setInterval(load, 4000); return () => clearInterval(iv); }, [app.id]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   const send = async () => {
@@ -331,7 +331,7 @@ function DirectHRThread({ token, user }: { token: string; user: any }) {
       .then((d: any[]) => { setMessages(d); setLoading(false); })
       .catch(() => setLoading(false));
 
-  useEffect(() => { load(); const iv = setInterval(load, 8000); return () => clearInterval(iv); }, []);
+  useEffect(() => { load(); const iv = setInterval(load, 4000); return () => clearInterval(iv); }, []);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   const send = async () => {

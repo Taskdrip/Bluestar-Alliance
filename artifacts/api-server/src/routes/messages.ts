@@ -96,7 +96,7 @@ router.post("/:applicationId", async (req, res) => {
         const pushPayload = JSON.stringify({
           title: "New Message — Bluestar Alliance",
           body: content.trim().slice(0, 120),
-          url: "/apply",
+          url: "/dashboard",
           tag: `message-${applicationId}`,
         });
 
