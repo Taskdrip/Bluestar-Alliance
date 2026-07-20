@@ -77,8 +77,7 @@ function ChatThread({
   const [text,     setText]     = useState("");
   const [sending,  setSending]  = useState(false);
   const [error,    setError]    = useState("");
-  const bottomRef  = useRef<HTMLDivElement>(null);
-  const scrollRef  = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   // Track previous message count so we can distinguish a poll update vs initial load
   const prevCountRef = useRef(0);
 
@@ -88,8 +87,9 @@ function ChatThread({
     return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
   };
 
-  const scrollToBottom = (smooth = true) => {
-    bottomRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "instant" });
+  const scrollToBottom = (_smooth = true) => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   };
 
   const load = async () => {
@@ -195,7 +195,6 @@ function ChatThread({
             </div>
           );
         })}
-        <div ref={bottomRef} />
       </div>
 
       <div className="border-t border-gray-100 p-3 shrink-0">

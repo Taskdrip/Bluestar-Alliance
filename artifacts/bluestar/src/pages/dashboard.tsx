@@ -153,7 +153,15 @@ function ChatThread({ app, user, token }: { app: Application; user: any; token: 
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef   = useRef<HTMLDivElement>(null);
+  const prevCountRef = useRef(0);
+
+  const isNearBottom = () => {
+    const el = scrollRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+  };
+  const scrollToBottom = () => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; };
 
   const load = () =>
     fetch(`/api/messages/${app.id}`, { headers: { Authorization: `Bearer ${token}` } })
@@ -162,7 +170,11 @@ function ChatThread({ app, user, token }: { app: Application; user: any; token: 
       .catch(() => setLoading(false));
 
   useEffect(() => { load(); const iv = setInterval(load, 4000); return () => clearInterval(iv); }, [app.id]);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => {
+    const isFirst = prevCountRef.current === 0 && messages.length > 0;
+    if (isFirst || (messages.length > prevCountRef.current && isNearBottom())) scrollToBottom();
+    prevCountRef.current = messages.length;
+  }, [messages]);
 
   const send = async () => {
     const t = text.trim(); if (!t || sending) return;
@@ -191,7 +203,7 @@ function ChatThread({ app, user, token }: { app: Application; user: any; token: 
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto space-y-3 min-h-0 pb-1">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-3 min-h-0 pb-1">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-10">
             <Inbox className="w-8 h-8 text-gray-200 mb-2" />
@@ -218,7 +230,6 @@ function ChatThread({ app, user, token }: { app: Application; user: any; token: 
             </div>
           );
         })}
-        <div ref={bottomRef} />
       </div>
       <div className="pt-3 border-t border-gray-100 shrink-0">
         {error && <p className="text-xs text-red-500 mb-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{error}</p>}
@@ -321,9 +332,17 @@ function DirectHRThread({ token, user }: { token: string; user: any }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef    = useRef<HTMLDivElement>(null);
+  const prevCountRef = useRef(0);
 
   const myEmail = user?.email ?? "";
+
+  const isNearBottom = () => {
+    const el = scrollRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+  };
+  const scrollToBottom = () => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; };
 
   const load = () =>
     fetch("/api/direct-messages", { headers: { Authorization: `Bearer ${token}` } })
@@ -332,7 +351,11 @@ function DirectHRThread({ token, user }: { token: string; user: any }) {
       .catch(() => setLoading(false));
 
   useEffect(() => { load(); const iv = setInterval(load, 4000); return () => clearInterval(iv); }, []);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => {
+    const isFirst = prevCountRef.current === 0 && messages.length > 0;
+    if (isFirst || (messages.length > prevCountRef.current && isNearBottom())) scrollToBottom();
+    prevCountRef.current = messages.length;
+  }, [messages]);
 
   const send = async () => {
     const t = text.trim(); if (!t || sending) return;
@@ -361,7 +384,7 @@ function DirectHRThread({ token, user }: { token: string; user: any }) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto space-y-3 min-h-0 pb-1">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-3 min-h-0 pb-1">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-10">
             <Inbox className="w-8 h-8 text-gray-200 mb-2" />
@@ -384,7 +407,6 @@ function DirectHRThread({ token, user }: { token: string; user: any }) {
             </div>
           );
         })}
-        <div ref={bottomRef} />
       </div>
       <div className="pt-3 border-t border-gray-100 shrink-0">
         {error && <p className="text-xs text-red-500 mb-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{error}</p>}
