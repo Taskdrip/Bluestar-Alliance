@@ -314,50 +314,163 @@ function ApplicationsTab({ applications, setLocation }: { applications: Applicat
   );
 }
 
-// ─── Tab: Messages ───────────────────────────────────────────────────────────
-function MessagesTab({ applications, token, user }: { applications: Application[]; token: string; user: any }) {
-  const [selected, setSelected] = useState<Application | null>(applications[0] ?? null);
+// ─── Direct HR Chat (not application-scoped) ─────────────────────────────────
+function DirectHRThread({ token, user }: { token: string; user: any }) {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  if (applications.length === 0) return (
-    <div className="flex flex-col items-center text-center py-20 gap-3">
-      <MessageSquare className="w-10 h-10 text-gray-200" />
-      <p className="font-semibold text-gray-600">No conversations yet</p>
-      <p className="text-sm text-gray-400 max-w-xs">Submit an application and HR will be able to reach you here directly.</p>
+  const myEmail = user?.email ?? "";
+
+  const load = () =>
+    fetch("/api/direct-messages", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then((d: any[]) => { setMessages(d); setLoading(false); })
+      .catch(() => setLoading(false));
+
+  useEffect(() => { load(); const iv = setInterval(load, 8000); return () => clearInterval(iv); }, []);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  const send = async () => {
+    const t = text.trim(); if (!t || sending) return;
+    setSending(true); setError("");
+    try {
+      const res = await fetch(`/api/direct-messages/${encodeURIComponent(myEmail)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ senderRole: "user", senderName: user?.fullName ?? "Applicant", content: t }),
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); setError(e.error ?? "Send failed."); return; }
+      const newMsg = await res.json();
+      setMessages(prev => [...prev, newMsg]); setText("");
+    } catch { setError("Network error. Please try again."); }
+    finally { setSending(false); }
+  };
+
+  if (loading) return (
+    <div className="space-y-3 py-2">
+      {[1,2,3].map(i => <div key={i} className={`flex gap-2 ${i%2===0?"flex-row-reverse":""}`}>
+        <Skeleton className="w-7 h-7 rounded-full shrink-0" />
+        <Skeleton className="h-10 w-40 rounded-2xl" />
+      </div>)}
     </div>
   );
 
   return (
-    <div className="flex gap-0 rounded-2xl border border-gray-200 overflow-hidden shadow-sm min-h-[420px]">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto space-y-3 min-h-0 pb-1">
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center py-10">
+            <Inbox className="w-8 h-8 text-gray-200 mb-2" />
+            <p className="text-sm text-gray-400 font-medium">No direct messages yet</p>
+            <p className="text-xs text-gray-300 mt-0.5">HR will message you here directly. You can also reach out below.</p>
+          </div>
+        ) : messages.map((m: any) => {
+          const mine = m.senderRole === "user";
+          return (
+            <div key={m.id} className={`flex gap-2 ${mine ? "flex-row-reverse" : ""}`}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-white ${mine ? "bg-[#f5a623]" : "bg-[#0f2c6b]"}`}>
+                {mine ? <User className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
+              </div>
+              <div className={`max-w-[76%] flex flex-col gap-0.5 ${mine ? "items-end" : "items-start"}`}>
+                <div className={`px-3.5 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${mine ? "bg-[#0f2c6b] text-white rounded-tr-sm" : "bg-gray-100 text-gray-900 rounded-tl-sm"}`}>
+                  {m.content}
+                </div>
+                <span className="text-[10px] text-gray-400 px-1">{mine ? "You" : m.senderName} · {fmtTime(m.createdAt)}</span>
+              </div>
+            </div>
+          );
+        })}
+        <div ref={bottomRef} />
+      </div>
+      <div className="pt-3 border-t border-gray-100 shrink-0">
+        {error && <p className="text-xs text-red-500 mb-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{error}</p>}
+        <div className="flex gap-2 items-end">
+          <textarea
+            value={text} onChange={e => setText(e.target.value)}
+            onKeyDown={e => { if (e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();} }}
+            placeholder="Type a message to HR… (Enter to send)"
+            rows={2}
+            className="flex-1 resize-none rounded-xl border border-gray-200 px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f2c6b]/25 focus:border-[#0f2c6b] placeholder:text-gray-300 transition-all"
+          />
+          <button onClick={send} disabled={!text.trim()||sending}
+            className="w-9 h-9 rounded-xl bg-[#0f2c6b] text-white flex items-center justify-center hover:bg-[#0f2c6b]/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0">
+            {sending ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Tab: Messages ───────────────────────────────────────────────────────────
+type MsgSelected = "direct" | number; // "direct" = HR DM thread, number = applicationId
+
+function MessagesTab({ applications, token, user }: { applications: Application[]; token: string; user: any }) {
+  const [selected, setSelected] = useState<MsgSelected>("direct");
+
+  const selectedApp = typeof selected === "number" ? applications.find(a => a.id === selected) ?? null : null;
+
+  return (
+    <div className="flex gap-0 rounded-2xl border border-gray-200 overflow-hidden shadow-sm min-h-[460px]">
       {/* Sidebar */}
       <div className="w-48 shrink-0 border-r border-gray-100 bg-gray-50 flex flex-col overflow-y-auto">
-        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest px-4 py-3">Applications</p>
-        {applications.map(app => (
-          <button
-            key={app.id}
-            onClick={() => setSelected(app)}
-            className={`text-left px-4 py-3 border-b border-gray-100 last:border-0 transition-colors
-              ${selected?.id === app.id ? "bg-[#0f2c6b] text-white" : "hover:bg-gray-100 text-gray-700"}`}
-          >
-            <p className={`text-xs font-semibold truncate ${selected?.id === app.id ? "text-white" : "text-gray-800"}`}>
-              {app.position}
-            </p>
-            <p className={`text-[10px] mt-0.5 ${selected?.id === app.id ? "text-blue-200" : "text-gray-400"}`}>
-              {app.country}
-            </p>
-          </button>
-        ))}
+        {/* HR Direct Chat */}
+        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest px-4 py-3">HR Direct</p>
+        <button
+          onClick={() => setSelected("direct")}
+          className={`text-left px-4 py-3 border-b border-gray-100 transition-colors ${selected === "direct" ? "bg-[#0f2c6b] text-white" : "hover:bg-gray-100 text-gray-700"}`}
+        >
+          <div className="flex items-center gap-2">
+            <Shield className={`w-3.5 h-3.5 shrink-0 ${selected === "direct" ? "text-[#f5a623]" : "text-[#0f2c6b]"}`} />
+            <p className={`text-xs font-semibold truncate ${selected === "direct" ? "text-white" : "text-gray-800"}`}>Bluestar HR</p>
+          </div>
+          <p className={`text-[10px] mt-0.5 ${selected === "direct" ? "text-blue-200" : "text-gray-400"}`}>Direct messages</p>
+        </button>
+
+        {/* Application threads */}
+        {applications.length > 0 && (
+          <>
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest px-4 py-3">Applications</p>
+            {applications.map(app => (
+              <button
+                key={app.id}
+                onClick={() => setSelected(app.id)}
+                className={`text-left px-4 py-3 border-b border-gray-100 last:border-0 transition-colors ${selected === app.id ? "bg-[#0f2c6b] text-white" : "hover:bg-gray-100 text-gray-700"}`}
+              >
+                <p className={`text-xs font-semibold truncate ${selected === app.id ? "text-white" : "text-gray-800"}`}>{app.position}</p>
+                <p className={`text-[10px] mt-0.5 ${selected === app.id ? "text-blue-200" : "text-gray-400"}`}>{app.country}</p>
+              </button>
+            ))}
+          </>
+        )}
       </div>
-      {/* Thread */}
+
+      {/* Thread area */}
       <div className="flex-1 flex flex-col p-4 min-h-0 overflow-hidden">
-        {selected ? (
+        {selected === "direct" ? (
+          <>
+            <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-100 shrink-0">
+              <Shield className="w-4 h-4 text-[#0f2c6b]" />
+              <span className="text-sm font-semibold text-gray-800">Bluestar Alliance HR</span>
+              <span className="text-xs text-gray-400 ml-auto">Direct channel</span>
+            </div>
+            <div className="flex-1 min-h-0">
+              <DirectHRThread token={token} user={user} />
+            </div>
+          </>
+        ) : selectedApp ? (
           <>
             <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-100 shrink-0">
               <Briefcase className="w-4 h-4 text-[#0f2c6b]" />
-              <span className="text-sm font-semibold text-gray-800 truncate">{selected.position}</span>
-              <StatusPill status={selected.status} />
+              <span className="text-sm font-semibold text-gray-800 truncate">{selectedApp.position}</span>
+              <StatusPill status={selectedApp.status} />
             </div>
             <div className="flex-1 min-h-0">
-              <ChatThread app={selected} user={user} token={token} />
+              <ChatThread app={selectedApp} user={user} token={token} />
             </div>
           </>
         ) : (
@@ -593,13 +706,17 @@ export default function Dashboard() {
       .catch(() => setAppsLoading(false));
   }, [user, token]);
 
-  // Badge counts
+  // Badge counts — notifications + direct messages
   useEffect(() => {
     if (!token || !user) return;
     const poll = () => {
       fetch("/api/notifications", { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.ok ? r.json() : [])
         .then((d: Notification[]) => setUnreadNotifs(d.filter(n => !n.isRead).length))
+        .catch(() => {});
+      fetch("/api/direct-messages", { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : [])
+        .then((d: any[]) => setUnreadMsgs(d.filter((m: any) => !m.isRead && m.senderRole === "admin").length))
         .catch(() => {});
     };
     poll(); const iv = setInterval(poll, 10000); return () => clearInterval(iv);

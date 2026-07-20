@@ -59,13 +59,24 @@ export default function Admin() {
     description: "", salaryRange: "", isUrgent: false
   });
 
-  // Chat state
+  // Chat state — Application threads
+  const [chatMode, setChatMode] = useState<"applications" | "users">("applications");
   const [selectedAppId, setSelectedAppId] = useState<number | null>(null);
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sendingMsg, setSendingMsg] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Chat state — User DMs
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [selectedUserEmail, setSelectedUserEmail] = useState<string | null>(null);
+  const [dmMessages, setDmMessages] = useState<any[]>([]);
+  const [dmSending, setDmSending] = useState(false);
+  const [dmText, setDmText] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+  const dmEndRef = useRef<HTMLDivElement>(null);
 
   // Payment settings state
   const [paymentForm, setPaymentForm] = useState({
@@ -222,28 +233,53 @@ export default function Admin() {
   // Fetch messages once when app selected, then poll every 4 s while chat is open
   useEffect(() => {
     if (!selectedAppId) return;
-
     let cancelled = false;
-
     const fetchMessages = () => {
-      fetch(`/api/messages/${selectedAppId}`)
+      fetch(`/api/messages/${selectedAppId}`, { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(data => { if (!cancelled) setMessages(data); })
         .catch(() => {});
     };
-
-    fetchMessages(); // immediate load
+    fetchMessages();
     const timer = setInterval(fetchMessages, 4000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
+    return () => { cancelled = true; clearInterval(timer); };
   }, [selectedAppId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Load all users when switching to users DM mode
+  useEffect(() => {
+    if (chatMode !== "users" || !token) return;
+    setUsersLoading(true);
+    fetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setAllUsers(data.filter((u: any) => u.role === "user")))
+      .catch(() => {})
+      .finally(() => setUsersLoading(false));
+  }, [chatMode, token]);
+
+  // Poll DMs for selected user
+  useEffect(() => {
+    if (!selectedUserEmail || chatMode !== "users") return;
+    let cancelled = false;
+    const load = () => {
+      fetch(`/api/direct-messages/${encodeURIComponent(selectedUserEmail)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(r => r.ok ? r.json() : [])
+        .then(data => { if (!cancelled) setDmMessages(data); })
+        .catch(() => {});
+    };
+    load();
+    const iv = setInterval(load, 4000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [selectedUserEmail, chatMode]);
+
+  useEffect(() => {
+    dmEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [dmMessages]);
 
   if (isLoadingUser) {
     return <div className="p-8 flex justify-center"><Skeleton className="h-12 w-12 rounded-full" /></div>;
@@ -282,6 +318,7 @@ export default function Admin() {
   const openChatForApp = (app: any) => {
     setSelectedApp(app);
     setSelectedAppId(app.id);
+    setChatMode("applications");
     setActiveTab("chat");
   };
 
@@ -299,6 +336,24 @@ export default function Admin() {
       setNewMessage("");
     } catch (e) {}
     setSendingMsg(false);
+  };
+
+  const handleSendDm = async () => {
+    if (!dmText.trim() || !selectedUserEmail || dmSending) return;
+    setDmSending(true);
+    try {
+      const res = await fetch(`/api/direct-messages/${encodeURIComponent(selectedUserEmail)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ senderRole: "admin", senderName: "Bluestar HR Team", content: dmText.trim() }),
+      });
+      if (res.ok) {
+        const msg = await res.json();
+        setDmMessages(prev => [...prev, msg]);
+        setDmText("");
+      }
+    } catch (_) {}
+    setDmSending(false);
   };
 
   const handleOpenJobModal = (job?: any) => {
@@ -743,81 +798,209 @@ export default function Admin() {
 
         {/* ── CHAT ─────────────────────────────────────────────────── */}
         {activeTab === "chat" && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
-            {/* Application List */}
-            <Card className="overflow-hidden flex flex-col">
-              <CardHeader className="pb-3 border-b">
-                <CardTitle className="text-base font-semibold">Applications</CardTitle>
-                <CardDescription className="text-xs">Select to open a chat thread</CardDescription>
-              </CardHeader>
-              <div className="flex-1 overflow-y-auto">
-                {isLoadingApps ? (
-                  <div className="p-4 space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-16 w-full" />)}</div>
-                ) : applications?.map(app => (
-                  <button
-                    key={app.id}
-                    onClick={() => { setSelectedApp(app); setSelectedAppId(app.id); }}
-                    className={`w-full text-left px-4 py-3 border-b border-border hover:bg-muted/30 transition-colors ${selectedAppId === app.id ? "bg-primary/5 border-l-2 border-l-primary" : ""}`}
-                  >
-                    <div className="font-medium text-sm text-foreground">{app.fullName}</div>
-                    <div className="text-xs text-muted-foreground">{app.position}</div>
-                    <div className="text-xs text-muted-foreground">{app.email}</div>
-                  </button>
-                ))}
-              </div>
-            </Card>
+          <div className="space-y-4">
+            {/* Mode toggle */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setChatMode("applications")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${chatMode === "applications" ? "bg-primary text-white border-primary" : "bg-background text-muted-foreground border-border hover:bg-muted/30"}`}
+              >
+                <span className="flex items-center gap-2"><Briefcase className="w-4 h-4" /> Application Threads</span>
+              </button>
+              <button
+                onClick={() => { setChatMode("users"); setSelectedUserEmail(null); setDmMessages([]); }}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${chatMode === "users" ? "bg-primary text-white border-primary" : "bg-background text-muted-foreground border-border hover:bg-muted/30"}`}
+              >
+                <span className="flex items-center gap-2"><Users className="w-4 h-4" /> All Users (Direct DM)</span>
+              </button>
+            </div>
 
-            {/* Chat Window */}
-            <Card className="lg:col-span-2 flex flex-col overflow-hidden">
-              {selectedApp ? (
-                <>
-                  <CardHeader className="pb-3 border-b flex-row items-center justify-between">
-                    <div>
-                      <CardTitle className="text-base font-semibold">{selectedApp.fullName}</CardTitle>
-                      <CardDescription className="text-xs">{selectedApp.position} · {selectedApp.email}</CardDescription>
-                    </div>
-                    <Badge className={`${getStatusColor(selectedApp.status)} text-white`}>{selectedApp.status}</Badge>
+            {chatMode === "applications" && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[580px]">
+                {/* Application List */}
+                <Card className="overflow-hidden flex flex-col">
+                  <CardHeader className="pb-3 border-b">
+                    <CardTitle className="text-base font-semibold">Applications</CardTitle>
+                    <CardDescription className="text-xs">Select to open a chat thread</CardDescription>
                   </CardHeader>
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                    {messages.length === 0 ? (
-                      <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                        No messages yet. Start the conversation below.
+                  <div className="flex-1 overflow-y-auto">
+                    {isLoadingApps ? (
+                      <div className="p-4 space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-16 w-full" />)}</div>
+                    ) : applications && applications.length > 0 ? applications.map(app => (
+                      <button
+                        key={app.id}
+                        onClick={() => { setSelectedApp(app); setSelectedAppId(app.id); }}
+                        className={`w-full text-left px-4 py-3 border-b border-border hover:bg-muted/30 transition-colors ${selectedAppId === app.id ? "bg-primary/5 border-l-2 border-l-primary" : ""}`}
+                      >
+                        <div className="font-medium text-sm text-foreground">{app.fullName}</div>
+                        <div className="text-xs text-muted-foreground">{app.position}</div>
+                        <div className="text-xs text-muted-foreground">{app.email}</div>
+                      </button>
+                    )) : (
+                      <div className="p-6 text-center text-muted-foreground text-sm">No applications yet</div>
+                    )}
+                  </div>
+                </Card>
+
+                {/* Chat Window */}
+                <Card className="lg:col-span-2 flex flex-col overflow-hidden">
+                  {selectedApp ? (
+                    <>
+                      <CardHeader className="pb-3 border-b flex-row items-center justify-between">
+                        <div>
+                          <CardTitle className="text-base font-semibold">{selectedApp.fullName}</CardTitle>
+                          <CardDescription className="text-xs">{selectedApp.position} · {selectedApp.email}</CardDescription>
+                        </div>
+                        <Badge className={`${getStatusColor(selectedApp.status)} text-white`}>{selectedApp.status}</Badge>
+                      </CardHeader>
+                      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        {messages.length === 0 ? (
+                          <div className="h-full flex items-center justify-center text-muted-foreground text-sm">No messages yet. Start the conversation below.</div>
+                        ) : messages.map(msg => (
+                          <div key={msg.id} className={`flex ${msg.senderRole === "admin" ? "justify-end" : "justify-start"}`}>
+                            <div className={`max-w-[75%] px-4 py-2 rounded-lg text-sm ${msg.senderRole === "admin" ? "bg-primary text-white" : "bg-muted text-foreground"}`}>
+                              <p className="font-medium text-xs opacity-70 mb-1">{msg.senderName}</p>
+                              <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                              <p className="text-xs opacity-50 mt-1 text-right">{format(new Date(msg.createdAt), "HH:mm")}</p>
+                            </div>
+                          </div>
+                        ))}
+                        <div ref={messagesEndRef} />
                       </div>
-                    ) : messages.map(msg => (
-                      <div key={msg.id} className={`flex ${msg.senderRole === "admin" ? "justify-end" : "justify-start"}`}>
-                        <div className={`max-w-[75%] px-4 py-2 rounded-lg text-sm ${msg.senderRole === "admin" ? "bg-primary text-white" : "bg-muted text-foreground"}`}>
-                          <p className="font-medium text-xs opacity-70 mb-1">{msg.senderName}</p>
-                          <p className="leading-relaxed">{msg.content}</p>
-                          <p className="text-xs opacity-50 mt-1 text-right">{format(new Date(msg.createdAt), "HH:mm")}</p>
+                      <div className="p-4 border-t bg-muted/20">
+                        <div className="flex gap-2">
+                          <Input value={newMessage} onChange={e => setNewMessage(e.target.value)}
+                            placeholder="Type a message to this candidate..."
+                            className="flex-1"
+                            onKeyDown={e => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSendMessage())}
+                          />
+                          <Button onClick={handleSendMessage} disabled={sendingMsg || !newMessage.trim()} className="bg-primary hover:bg-primary/90">
+                            <Send className="w-4 h-4" />
+                          </Button>
                         </div>
                       </div>
-                    ))}
-                    <div ref={messagesEndRef} />
-                  </div>
-                  <div className="p-4 border-t bg-muted/20">
-                    <div className="flex gap-2">
-                      <Input
-                        value={newMessage}
-                        onChange={e => setNewMessage(e.target.value)}
-                        placeholder="Type a message to this candidate..."
-                        className="flex-1"
-                        onKeyDown={e => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSendMessage())}
-                      />
-                      <Button onClick={handleSendMessage} disabled={sendingMsg || !newMessage.trim()} className="bg-primary hover:bg-primary/90">
-                        <Send className="w-4 h-4" />
-                      </Button>
+                    </>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                      <div className="text-center">
+                        <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                        <p>Select an application to start chatting</p>
+                      </div>
                     </div>
+                  )}
+                </Card>
+              </div>
+            )}
+
+            {chatMode === "users" && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[580px]">
+                {/* User List */}
+                <Card className="overflow-hidden flex flex-col">
+                  <CardHeader className="pb-3 border-b">
+                    <CardTitle className="text-base font-semibold">Registered Users</CardTitle>
+                    <CardDescription className="text-xs">Message any user, even without an application</CardDescription>
+                    <Input
+                      value={userSearch}
+                      onChange={e => setUserSearch(e.target.value)}
+                      placeholder="Search by name or email…"
+                      className="mt-2 h-8 text-xs"
+                    />
+                  </CardHeader>
+                  <div className="flex-1 overflow-y-auto">
+                    {usersLoading ? (
+                      <div className="p-4 space-y-3">{[1,2,3,4].map(i => <Skeleton key={i} className="h-14 w-full" />)}</div>
+                    ) : allUsers.filter(u => !userSearch || u.fullName?.toLowerCase().includes(userSearch.toLowerCase()) || u.email?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
+                      <button
+                        key={u.id}
+                        onClick={() => { setSelectedUserEmail(u.email); setDmMessages([]); }}
+                        className={`w-full text-left px-4 py-3 border-b border-border hover:bg-muted/30 transition-colors ${selectedUserEmail === u.email ? "bg-primary/5 border-l-2 border-l-primary" : ""}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0">
+                            {u.fullName?.charAt(0)?.toUpperCase() ?? "?"}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-medium text-sm text-foreground truncate">{u.fullName}</div>
+                            <div className="text-xs text-muted-foreground truncate">{u.email}</div>
+                            <div className="text-[10px] text-muted-foreground">{u.applications?.length ?? 0} application{u.applications?.length !== 1 ? "s" : ""}</div>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                    {!usersLoading && allUsers.length === 0 && (
+                      <div className="p-6 text-center text-muted-foreground text-sm">No users registered yet</div>
+                    )}
                   </div>
-                </>
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                  <div className="text-center">
-                    <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                    <p>Select an application to start chatting</p>
-                  </div>
-                </div>
-              )}
-            </Card>
+                </Card>
+
+                {/* DM Thread */}
+                <Card className="lg:col-span-2 flex flex-col overflow-hidden">
+                  {selectedUserEmail ? (
+                    <>
+                      <CardHeader className="pb-3 border-b flex-row items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
+                          {(allUsers.find(u => u.email === selectedUserEmail)?.fullName ?? "U").charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base font-semibold truncate">
+                            {allUsers.find(u => u.email === selectedUserEmail)?.fullName ?? selectedUserEmail}
+                          </CardTitle>
+                          <CardDescription className="text-xs truncate">{selectedUserEmail}</CardDescription>
+                        </div>
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          {allUsers.find(u => u.email === selectedUserEmail)?.applications?.length ?? 0} apps
+                        </Badge>
+                      </CardHeader>
+                      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        {dmMessages.length === 0 ? (
+                          <div className="h-full flex items-center justify-center text-center text-muted-foreground text-sm">
+                            <div>
+                              <MessageSquare className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                              <p>No messages yet. Start the conversation.</p>
+                              <p className="text-xs mt-1 opacity-70">This user will receive an in-app notification instantly.</p>
+                            </div>
+                          </div>
+                        ) : dmMessages.map((msg: any) => (
+                          <div key={msg.id} className={`flex ${msg.senderRole === "admin" ? "justify-end" : "justify-start"}`}>
+                            <div className={`max-w-[75%] px-4 py-2 rounded-lg text-sm ${msg.senderRole === "admin" ? "bg-primary text-white" : "bg-muted text-foreground"}`}>
+                              <p className="font-medium text-xs opacity-70 mb-1">{msg.senderName}</p>
+                              <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                              <p className="text-xs opacity-50 mt-1 text-right">{format(new Date(msg.createdAt), "HH:mm")}</p>
+                            </div>
+                          </div>
+                        ))}
+                        <div ref={dmEndRef} />
+                      </div>
+                      <div className="p-4 border-t bg-muted/20">
+                        <div className="flex gap-2">
+                          <Input
+                            value={dmText}
+                            onChange={e => setDmText(e.target.value)}
+                            placeholder="Type a direct message…"
+                            className="flex-1"
+                            onKeyDown={e => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSendDm())}
+                          />
+                          <Button onClick={handleSendDm} disabled={dmSending || !dmText.trim()} className="bg-primary hover:bg-primary/90">
+                            {dmSending ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Send className="w-4 h-4" />}
+                          </Button>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-1.5">
+                          ✓ Message delivered instantly as in-app notification{process.env.NODE_ENV !== "production" ? " + push (if subscribed)" : " + push (if subscribed)"}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                      <div className="text-center">
+                        <Users className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                        <p>Select a user to start a direct conversation</p>
+                        <p className="text-xs mt-1 opacity-70">Messages are delivered in-app immediately, push if they subscribed</p>
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              </div>
+            )}
           </div>
         )}
 
@@ -1159,14 +1342,23 @@ export default function Admin() {
           </div>
         )}
 
-        {/* ── PUSH NOTIFICATIONS ───────────────────────────────────── */}
+        {/* ── BROADCAST MESSAGING ──────────────────────────────────── */}
         {activeTab === "push" && (
           <div className="max-w-2xl space-y-6">
             <div>
-              <h2 className="font-serif text-2xl font-bold text-primary mb-1">Push Notification Blast</h2>
+              <h2 className="font-serif text-2xl font-bold text-primary mb-1">Broadcast Messaging</h2>
               <p className="text-muted-foreground text-sm">
-                Send a push notification to a targeted segment of users who have enabled browser notifications.
+                Send a message to a targeted segment. Delivered as in-app notifications instantly — plus push alerts to users who have subscribed.
               </p>
+            </div>
+
+            {/* How it works */}
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50 border border-blue-100 text-sm text-blue-800">
+              <Bell className="w-5 h-5 flex-shrink-0 mt-0.5 text-blue-500" />
+              <div>
+                <p className="font-semibold">Works for everyone — no subscription required</p>
+                <p className="text-xs mt-0.5 text-blue-700">Every matched user receives an in-app notification in their portal. Additionally, users who have enabled browser push will also receive a push alert.</p>
+              </div>
             </div>
 
             <Card>
@@ -1180,62 +1372,72 @@ export default function Admin() {
                     onChange={e => { setPushForm(p => ({ ...p, segment: e.target.value })); setPushResult(null); setPushError(null); }}
                     className="w-full border border-border rounded-md px-3 py-2 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                   >
-                    <option value="all">🌐 All Users (everyone subscribed)</option>
-                    <option value="paid_addons">💼 Paid Add-on Users (have ordered add-ons)</option>
-                    <option value="free_applicants">📋 Free Applicants (applied, no add-ons)</option>
-                    <option value="approved">✅ Approved Users (application approved)</option>
-                    <option value="unapproved">⏳ Unapproved Users (pending / not yet approved)</option>
+                    <option value="all_registered">🌐 All Registered Users (every user account)</option>
+                    <option value="applicants">📋 All Applicants (submitted at least one application)</option>
+                    <option value="paid_addons">💼 Add-on Purchasers (have ordered Visa/Flight/Permit)</option>
+                    <option value="free_applicants">📄 Free Applicants (applied, no add-ons)</option>
+                    <option value="approved">✅ Approved Applicants (status: approved)</option>
+                    <option value="unapproved">⏳ Pending Applicants (not yet approved)</option>
                   </select>
                 </div>
 
                 {/* Title */}
                 <div>
-                  <Label className="text-foreground mb-2 block font-medium">Notification Title</Label>
+                  <Label className="text-foreground mb-2 block font-medium">Message Title</Label>
                   <Input
                     value={pushForm.title}
                     onChange={e => setPushForm(p => ({ ...p, title: e.target.value }))}
-                    placeholder="e.g. Your application has been updated"
+                    placeholder="e.g. Important Update from Bluestar Alliance"
                     className="bg-background"
                   />
                 </div>
 
                 {/* Body */}
                 <div>
-                  <Label className="text-foreground mb-2 block font-medium">Message</Label>
+                  <Label className="text-foreground mb-2 block font-medium">Message Body</Label>
                   <textarea
                     value={pushForm.body}
                     onChange={e => setPushForm(p => ({ ...p, body: e.target.value }))}
-                    placeholder="e.g. Log in to check your application status and next steps."
+                    placeholder="e.g. Please log in to check your application status and next steps."
                     rows={3}
                     className="w-full border border-border rounded-md px-3 py-2 bg-background text-sm resize-y focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[80px]"
                   />
                 </div>
 
-                {/* URL */}
+                {/* URL (for push click) */}
                 <div>
                   <Label className="text-foreground mb-2 block font-medium">
-                    Click URL <span className="text-muted-foreground font-normal">(optional)</span>
+                    Portal URL <span className="text-muted-foreground font-normal">(for push notification click — optional)</span>
                   </Label>
                   <Input
                     value={pushForm.url}
                     onChange={e => setPushForm(p => ({ ...p, url: e.target.value }))}
-                    placeholder="e.g. /apply or https://bluestar-alliance.com/jobs"
+                    placeholder="/dashboard"
                     className="bg-background"
                   />
                 </div>
 
                 {/* Result / Error feedback */}
                 {pushResult && (
-                  <div className={`flex items-start gap-3 p-4 rounded-lg border ${pushResult.failed === 0 ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"}`}>
-                    <CheckCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${pushResult.failed === 0 ? "text-green-600" : "text-amber-600"}`} />
-                    <div>
-                      <p className={`text-sm font-semibold ${pushResult.failed === 0 ? "text-green-800" : "text-amber-800"}`}>
-                        {pushResult.message || `Sent to ${pushResult.sent} of ${pushResult.total} subscribers`}
+                  <div className={`p-4 rounded-lg border space-y-1 ${(pushResult as any).pushFailed === 0 ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"}`}>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                      <p className="text-sm font-semibold text-green-800">
+                        {(pushResult as any).message || `Broadcast delivered to ${(pushResult as any).inAppSent ?? pushResult.sent ?? 0} users`}
                       </p>
-                      {!pushResult.message && pushResult.failed > 0 && (
-                        <p className="text-xs text-amber-700 mt-0.5">{pushResult.failed} expired subscriptions were removed automatically.</p>
-                      )}
                     </div>
+                    {!(pushResult as any).message && (
+                      <div className="text-xs text-muted-foreground ml-7 space-y-0.5">
+                        <p>✓ In-app notifications: <strong>{(pushResult as any).inAppSent ?? 0}</strong></p>
+                        {(pushResult as any).pushEnabled ? (
+                          <p>✓ Push alerts sent: <strong>{(pushResult as any).pushSent ?? 0}</strong>
+                            {(pushResult as any).pushFailed > 0 ? ` (${(pushResult as any).pushFailed} expired removed)` : ""}
+                          </p>
+                        ) : (
+                          <p className="text-amber-700">⚠ Push not configured — set VAPID keys to enable push</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
                 {pushError && (
@@ -1261,21 +1463,15 @@ export default function Admin() {
                           body: JSON.stringify({
                             title: pushForm.title.trim(),
                             body: pushForm.body.trim(),
-                            url: pushForm.url.trim() || "/",
+                            url: pushForm.url.trim() || "/dashboard",
                             segment: pushForm.segment,
                           }),
                         });
                         const data = await res.json();
-                        if (!res.ok) {
-                          setPushError(data.error || "Send failed");
-                        } else {
-                          setPushResult(data);
-                        }
-                      } catch {
-                        setPushError("Network error — please try again.");
-                      } finally {
-                        setPushSending(false);
-                      }
+                        if (!res.ok) { setPushError(data.error || "Send failed"); }
+                        else { setPushResult(data); }
+                      } catch { setPushError("Network error — please try again."); }
+                      finally { setPushSending(false); }
                     }}
                     disabled={pushSending || !pushForm.title.trim() || !pushForm.body.trim()}
                     className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
@@ -1283,12 +1479,12 @@ export default function Admin() {
                     {pushSending ? (
                       <span className="flex items-center gap-2">
                         <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Sending...
+                        Broadcasting...
                       </span>
                     ) : (
                       <span className="flex items-center gap-2">
-                        <Send className="w-4 h-4" />
-                        Send Notification
+                        <Megaphone className="w-4 h-4" />
+                        Send Broadcast
                       </span>
                     )}
                   </Button>

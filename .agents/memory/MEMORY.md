@@ -1,1 +1,2 @@
 - [Bluestar project setup](bluestar-setup.md) — pnpm monorepo, React/Vite frontend, Express API port 8080, Drizzle/PostgreSQL, codegen after OpenAPI changes.
+- [Direct messaging architecture](direct-messages.md) — email-scoped DM system separate from application-scoped messages; required DB migration after schema add.

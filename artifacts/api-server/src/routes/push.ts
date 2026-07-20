@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, pushSubscriptionsTable, applicationsTable, addonOrdersTable } from "@workspace/db";
+import { db, pushSubscriptionsTable, applicationsTable, addonOrdersTable, notificationsTable, usersTable } from "@workspace/db";
 import { eq, and, inArray, notInArray, ne } from "drizzle-orm";
 import { verifyToken } from "../lib/auth";
 import webpush from "web-push";
@@ -88,124 +88,135 @@ router.post("/unsubscribe", async (req, res) => {
  * Body: { title, body, url?, segment }
  * segment: "all" | "paid_addons" | "free_applicants" | "approved" | "unapproved"
  */
+/**
+ * POST /api/push/blast
+ * Admin: broadcast a message to a segment of users.
+ * Always creates in-app notifications. Also sends web push if VAPID is configured.
+ * Body: { title, body, url?, segment }
+ * segment: "all_registered" | "all" | "applicants" | "paid_addons" | "free_applicants" | "approved" | "unapproved"
+ */
 router.post("/blast", async (req, res) => {
   const auth = await requireAdmin(req, res);
   if (!auth) return;
 
-  if (!getVapidConfigured()) {
-    res.status(503).json({ error: "Push notifications not configured. Set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_EMAIL." });
-    return;
-  }
-
   const { title, body, url, segment } = req.body;
-  const validSegments = ["all", "paid_addons", "free_applicants", "approved", "unapproved"];
+  const validSegments = ["all_registered", "all", "applicants", "paid_addons", "free_applicants", "approved", "unapproved"];
 
   if (!title || typeof title !== "string") {
-    res.status(400).json({ error: "title is required" });
-    return;
+    res.status(400).json({ error: "title is required" }); return;
   }
   if (!body || typeof body !== "string") {
-    res.status(400).json({ error: "body is required" });
-    return;
+    res.status(400).json({ error: "body is required" }); return;
   }
   if (!segment || !validSegments.includes(segment)) {
-    res.status(400).json({ error: `segment must be one of: ${validSegments.join(", ")}` });
-    return;
+    res.status(400).json({ error: `segment must be one of: ${validSegments.join(", ")}` }); return;
   }
 
   try {
-    webpush.setVapidDetails(
-      `mailto:${process.env.VAPID_EMAIL}`,
-      process.env.VAPID_PUBLIC_KEY!,
-      process.env.VAPID_PRIVATE_KEY!
-    );
+    // ── Step 1: Determine target email list ──────────────────────────────
+    let targetEmails: string[] = [];
 
-    // Gather all subscriptions
-    let allSubs = await db.select().from(pushSubscriptionsTable);
+    if (segment === "all_registered" || segment === "all") {
+      // All regular users (role = "user")
+      const users = await db.select({ email: usersTable.email }).from(usersTable)
+        .where(eq(usersTable.role, "user"));
+      targetEmails = users.map(u => u.email);
 
-    if (segment !== "all") {
-      // Build a set of qualifying emails based on segment
-      let targetEmails: string[] = [];
+    } else if (segment === "applicants") {
+      const rows = await db.selectDistinct({ email: applicationsTable.email }).from(applicationsTable);
+      targetEmails = rows.map(r => r.email);
 
-      if (segment === "paid_addons") {
-        // Users who have placed addon orders
-        const orders = await db.selectDistinct({ email: addonOrdersTable.applicantEmail }).from(addonOrdersTable);
-        targetEmails = orders.map(o => o.email);
+    } else if (segment === "paid_addons") {
+      const rows = await db.selectDistinct({ email: addonOrdersTable.applicantEmail }).from(addonOrdersTable);
+      targetEmails = rows.map(r => r.email);
 
-      } else if (segment === "free_applicants") {
-        // Users who have applications but NO addon orders
-        const applicants = await db.selectDistinct({ email: applicationsTable.email }).from(applicationsTable);
-        const orderedEmails = await db.selectDistinct({ email: addonOrdersTable.applicantEmail }).from(addonOrdersTable);
-        const orderedSet = new Set(orderedEmails.map(o => o.email));
-        targetEmails = applicants.map(a => a.email).filter(e => !orderedSet.has(e));
+    } else if (segment === "free_applicants") {
+      const applicants = await db.selectDistinct({ email: applicationsTable.email }).from(applicationsTable);
+      const ordered = await db.selectDistinct({ email: addonOrdersTable.applicantEmail }).from(addonOrdersTable);
+      const orderedSet = new Set(ordered.map(o => o.email));
+      targetEmails = applicants.map(a => a.email).filter(e => !orderedSet.has(e));
 
-      } else if (segment === "approved") {
-        // Users with at least one approved application
-        const approved = await db
-          .selectDistinct({ email: applicationsTable.email })
-          .from(applicationsTable)
-          .where(eq(applicationsTable.status, "approved"));
-        targetEmails = approved.map(a => a.email);
+    } else if (segment === "approved") {
+      const rows = await db.selectDistinct({ email: applicationsTable.email }).from(applicationsTable)
+        .where(eq(applicationsTable.status, "approved"));
+      targetEmails = rows.map(r => r.email);
 
-      } else if (segment === "unapproved") {
-        // Users with applications but none approved
-        const allApplicants = await db.selectDistinct({ email: applicationsTable.email }).from(applicationsTable);
-        const approvedApplicants = await db
-          .selectDistinct({ email: applicationsTable.email })
-          .from(applicationsTable)
-          .where(eq(applicationsTable.status, "approved"));
-        const approvedSet = new Set(approvedApplicants.map(a => a.email));
-        targetEmails = allApplicants.map(a => a.email).filter(e => !approvedSet.has(e));
-      }
-
-      const targetSet = new Set(targetEmails);
-      allSubs = allSubs.filter(s => targetSet.has(s.userEmail));
+    } else if (segment === "unapproved") {
+      const all = await db.selectDistinct({ email: applicationsTable.email }).from(applicationsTable);
+      const approved = await db.selectDistinct({ email: applicationsTable.email }).from(applicationsTable)
+        .where(eq(applicationsTable.status, "approved"));
+      const approvedSet = new Set(approved.map(a => a.email));
+      targetEmails = all.map(a => a.email).filter(e => !approvedSet.has(e));
     }
 
-    if (allSubs.length === 0) {
-      res.json({ sent: 0, failed: 0, message: "No subscribers matched the selected segment." });
+    if (targetEmails.length === 0) {
+      res.json({ inAppSent: 0, pushSent: 0, pushFailed: 0, total: 0, message: "No users matched the selected segment." });
       return;
     }
 
-    const payload = JSON.stringify({
-      title,
-      body,
-      url: url || "/",
-    });
+    const targetSet = new Set(targetEmails);
 
-    let sent = 0;
-    let failed = 0;
-    const staleEndpoints: string[] = [];
-
+    // ── Step 2: Create in-app notifications for ALL matched users ────────
     await Promise.allSettled(
-      allSubs.map(async (sub) => {
-        try {
-          await webpush.sendNotification(
-            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-            payload
-          );
-          sent++;
-        } catch (err: any) {
-          // 410 Gone = subscription expired, clean it up
-          if (err?.statusCode === 410 || err?.statusCode === 404) {
-            staleEndpoints.push(sub.endpoint);
-          }
-          failed++;
-        }
-      })
+      targetEmails.map((email) =>
+        db.insert(notificationsTable).values({
+          recipientEmail: email,
+          recipientRole: "candidate",
+          message: `${title}: ${body}`,
+          type: "broadcast",
+          relatedId: null,
+          isRead: false,
+        })
+      )
     );
 
-    // Clean up stale subscriptions
-    if (staleEndpoints.length > 0) {
+    // ── Step 3: Send web push if VAPID configured (non-fatal) ────────────
+    let pushSent = 0;
+    let pushFailed = 0;
+
+    if (getVapidConfigured()) {
+      webpush.setVapidDetails(
+        `mailto:${process.env.VAPID_EMAIL}`,
+        process.env.VAPID_PUBLIC_KEY!,
+        process.env.VAPID_PRIVATE_KEY!
+      );
+
+      const allSubs = await db.select().from(pushSubscriptionsTable);
+      const matchedSubs = allSubs.filter(s => targetSet.has(s.userEmail));
+
+      const pushPayload = JSON.stringify({ title, body, url: url || "/dashboard", tag: "broadcast" });
+      const staleEndpoints: string[] = [];
+
+      await Promise.allSettled(
+        matchedSubs.map(async (sub) => {
+          try {
+            await webpush.sendNotification(
+              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+              pushPayload
+            );
+            pushSent++;
+          } catch (err: any) {
+            if (err?.statusCode === 410 || err?.statusCode === 404) staleEndpoints.push(sub.endpoint);
+            pushFailed++;
+          }
+        })
+      );
+
       for (const ep of staleEndpoints) {
         await db.delete(pushSubscriptionsTable).where(eq(pushSubscriptionsTable.endpoint, ep)).catch(() => {});
       }
     }
 
-    res.json({ sent, failed, total: allSubs.length });
+    res.json({
+      inAppSent: targetEmails.length,
+      pushSent,
+      pushFailed,
+      total: targetEmails.length,
+      pushEnabled: getVapidConfigured(),
+    });
   } catch (err: any) {
-    console.error("Push blast error:", err);
-    res.status(500).json({ error: "Failed to send notifications", detail: err?.message });
+    console.error("Blast error:", err);
+    res.status(500).json({ error: "Failed to send broadcast", detail: err?.message });
   }
 });
 

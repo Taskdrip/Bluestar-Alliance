@@ -1,6 +1,6 @@
-// Bluestar Alliance Service Worker — v2
+// Bluestar Alliance Service Worker — v3
 
-const CACHE_NAME = "bluestar-v2";
+const CACHE_NAME = "bluestar-v3";
 const STATIC_ASSETS = ["/", "/manifest.webmanifest", "/icons/icon-192x192.png", "/icons/icon-512x512.png"];
 
 // ── Install ────────────────────────────────────────────────────────────────────
@@ -24,7 +24,6 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
-  // Skip API, external requests, and dev HMR
   if (url.pathname.startsWith("/api/") || url.hostname !== self.location.hostname) return;
   if (url.pathname.startsWith("/@") || url.pathname.startsWith("/src/")) return;
 
@@ -51,24 +50,19 @@ self.addEventListener("push", (event) => {
 
   const title = data.title || "Bluestar Alliance";
   const options = {
-    body: data.body || "You have a new update from Bluestar Alliance.",
+    body: data.body || "You have a new notification.",
     icon: "/icons/icon-192x192.png",
-    badge: "/icons/icon-96x96.png",
-    image: data.image || undefined,
+    badge: "/icons/icon-72x72.png",
     tag: data.tag || "bluestar-notification",
-    renotify: true,
-    data: { url: data.url || "/" },
-    requireInteraction: false,
+    data: { url: data.url || "/dashboard" },
     vibrate: [200, 100, 200],
     actions: [
-      { action: "open",    title: "Open App" },
-      { action: "dismiss", title: "Dismiss"  }
-    ]
+      { action: "open", title: "Open Portal" },
+      { action: "dismiss", title: "Dismiss" },
+    ],
   };
 
-  event.waitUntil(
-    self.registration.showNotification(title, options)
-  );
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 // ── Notification Click ─────────────────────────────────────────────────────────
@@ -77,20 +71,21 @@ self.addEventListener("notificationclick", (event) => {
 
   if (event.action === "dismiss") return;
 
-  const targetUrl = event.notification.data?.url || "/";
-  const fullUrl = self.location.origin + (targetUrl.startsWith("/") ? targetUrl : "/" + targetUrl);
+  const targetUrl = event.notification.data?.url || "/dashboard";
 
   event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
-      // Re-focus an existing open tab on the same origin
-      const existing = list.find((c) => c.url.startsWith(self.location.origin) && "focus" in c);
-      if (existing) return existing.focus().then((c) => c.navigate(fullUrl));
-      return clients.openWindow(fullUrl);
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+      // Re-focus an existing tab if already open
+      for (const client of windowClients) {
+        const clientUrl = new URL(client.url);
+        if (clientUrl.hostname === self.location.hostname) {
+          client.focus();
+          client.navigate(targetUrl);
+          return;
+        }
+      }
+      // Open a new tab
+      return clients.openWindow(targetUrl);
     })
   );
-});
-
-// ── Background Sync (future-proof) ────────────────────────────────────────────
-self.addEventListener("sync", (_event) => {
-  // Placeholder for future offline-form submission sync
 });
