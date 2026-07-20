@@ -101,12 +101,14 @@ router.get("/", async (req, res) => {
     .where(eq(directMessagesTable.userEmail, email))
     .orderBy(directMessagesTable.createdAt);
 
-  // Mark admin messages as read when user views them
-  await db
-    .update(directMessagesTable)
-    .set({ isRead: true })
-    .where(and(eq(directMessagesTable.userEmail, email), eq(directMessagesTable.senderRole, "admin")))
-    .catch(() => {});
+  // Mark admin messages as read when user explicitly views them (not when polling for unread count)
+  if (req.query.markRead !== "false") {
+    await db
+      .update(directMessagesTable)
+      .set({ isRead: true })
+      .where(and(eq(directMessagesTable.userEmail, email), eq(directMessagesTable.senderRole, "admin")))
+      .catch(() => {});
+  }
 
   res.json(msgs.map(serialize));
 });
@@ -220,12 +222,14 @@ router.get("/guest/:email", async (req, res) => {
       .where(eq(directMessagesTable.userEmail, userEmail))
       .orderBy(directMessagesTable.createdAt);
 
-    // Mark admin replies as read when the guest views them
-    await db
-      .update(directMessagesTable)
-      .set({ isRead: true })
-      .where(and(eq(directMessagesTable.userEmail, userEmail), eq(directMessagesTable.senderRole, "admin")))
-      .catch(() => {});
+    // Mark admin replies as read when the guest explicitly views them (not when polling for unread count)
+    if (req.query.markRead !== "false") {
+      await db
+        .update(directMessagesTable)
+        .set({ isRead: true })
+        .where(and(eq(directMessagesTable.userEmail, userEmail), eq(directMessagesTable.senderRole, "admin")))
+        .catch(() => {});
+    }
 
     res.json(msgs.map(serialize));
   } catch {

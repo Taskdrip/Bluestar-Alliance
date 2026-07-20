@@ -6,8 +6,11 @@ import { useGetCurrentUser, getGetCurrentUserQueryKey } from "@workspace/api-cli
 const GUEST_EMAIL_KEY = "bluestar_chat_email";
 const GUEST_NAME_KEY  = "bluestar_chat_name";
 
-function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+function fmtTime(iso: string | null | undefined) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 }
 
 // ─── Guest identity form ─────────────────────────────────────────────────────
@@ -74,7 +77,20 @@ function ChatThread({
   const [text,     setText]     = useState("");
   const [sending,  setSending]  = useState(false);
   const [error,    setError]    = useState("");
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const bottomRef  = useRef<HTMLDivElement>(null);
+  const scrollRef  = useRef<HTMLDivElement>(null);
+  // Track previous message count so we can distinguish a poll update vs initial load
+  const prevCountRef = useRef(0);
+
+  const isNearBottom = () => {
+    const el = scrollRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+  };
+
+  const scrollToBottom = (smooth = true) => {
+    bottomRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "instant" });
+  };
 
   const load = async () => {
     try {
@@ -88,7 +104,6 @@ function ChatThread({
       }
       if (res.ok) {
         const data = await res.json();
-        // For logged-in users the response is the flat list; for guest it's also flat
         setMessages(Array.isArray(data) ? data : []);
       }
     } catch { /* silent */ }
@@ -101,8 +116,17 @@ function ChatThread({
     return () => clearInterval(iv);
   }, [userEmail]);
 
+  // Auto-scroll: always on first load; after that only when user is near the bottom
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const isFirstLoad = prevCountRef.current === 0 && messages.length > 0;
+    if (isFirstLoad) {
+      // Jump instantly to bottom so user sees latest messages on open
+      scrollToBottom(false);
+    } else if (messages.length > prevCountRef.current && isNearBottom()) {
+      // New message arrived and user is already near bottom — follow it
+      scrollToBottom(true);
+    }
+    prevCountRef.current = messages.length;
   }, [messages]);
 
   const send = async () => {
@@ -128,6 +152,8 @@ function ChatThread({
       const msg = await res.json();
       setMessages(prev => [...prev, msg]);
       setText("");
+      // Always scroll to bottom after the user sends
+      setTimeout(() => scrollToBottom(true), 50);
     } catch { setError("Network error. Please try again."); }
     finally { setSending(false); }
   };
@@ -142,7 +168,7 @@ function ChatThread({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto space-y-2.5 px-4 py-3 min-h-0">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-2.5 px-4 py-3 min-h-0">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-6 text-center">
             <MessageSquare className="w-8 h-8 text-gray-200 mb-2" />
@@ -226,10 +252,11 @@ export default function ChatWidget() {
       try {
         let msgs: any[] = [];
         if (isLoggedIn) {
-          const res = await fetch("/api/direct-messages", { headers: { Authorization: `Bearer ${token}` } });
+          // markRead=false so the badge stays visible until the user opens the widget
+          const res = await fetch("/api/direct-messages?markRead=false", { headers: { Authorization: `Bearer ${token}` } });
           if (res.ok) msgs = await res.json();
         } else if (guestEmail) {
-          const res = await fetch(`/api/direct-messages/guest/${encodeURIComponent(guestEmail)}`);
+          const res = await fetch(`/api/direct-messages/guest/${encodeURIComponent(guestEmail)}?markRead=false`);
           if (res.ok) msgs = await res.json();
         }
         const unreadCount = msgs.filter((m: any) => m.senderRole === "admin" && !m.isRead).length;
