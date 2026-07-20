@@ -69,7 +69,8 @@ export default function Admin() {
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sendingMsg, setSendingMsg] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const prevMsgCountRef     = useRef(0);
 
   // Chat state — User DMs
   const [allUsers, setAllUsers] = useState<any[]>([]);
@@ -79,7 +80,8 @@ export default function Admin() {
   const [dmSending, setDmSending] = useState(false);
   const [dmText, setDmText] = useState("");
   const [userSearch, setUserSearch] = useState("");
-  const dmEndRef = useRef<HTMLDivElement>(null);
+  const dmContainerRef  = useRef<HTMLDivElement>(null);
+  const prevDmCountRef  = useRef(0);
 
   // Chat state — Broadcast
   const [broadcastText, setBroadcastText] = useState("");
@@ -295,7 +297,14 @@ export default function Admin() {
   }, [selectedAppId]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const isFirst = prevMsgCountRef.current === 0 && messages.length > 0;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    if (isFirst || (messages.length > prevMsgCountRef.current && nearBottom)) {
+      el.scrollTop = el.scrollHeight;
+    }
+    prevMsgCountRef.current = messages.length;
   }, [messages]);
 
   // Load DM threads when switching to users DM mode
@@ -335,7 +344,14 @@ export default function Admin() {
   }, [selectedUserEmail, chatMode]);
 
   useEffect(() => {
-    dmEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = dmContainerRef.current;
+    if (!el) return;
+    const isFirst = prevDmCountRef.current === 0 && dmMessages.length > 0;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    if (isFirst || (dmMessages.length > prevDmCountRef.current && nearBottom)) {
+      el.scrollTop = el.scrollHeight;
+    }
+    prevDmCountRef.current = dmMessages.length;
   }, [dmMessages]);
 
   if (isLoadingUser) {
@@ -970,7 +986,7 @@ export default function Admin() {
                         </div>
                         <Badge className={`${getStatusColor(selectedApp.status)} text-white`}>{selectedApp.status}</Badge>
                       </CardHeader>
-                      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
                         {messages.length === 0 ? (
                           <div className="h-full flex items-center justify-center text-muted-foreground text-sm">No messages yet. Start the conversation below.</div>
                         ) : messages.map(msg => (
@@ -982,7 +998,6 @@ export default function Admin() {
                             </div>
                           </div>
                         ))}
-                        <div ref={messagesEndRef} />
                       </div>
                       <div className="p-4 border-t bg-muted/20">
                         <div className="flex gap-2">
@@ -1068,7 +1083,7 @@ export default function Admin() {
                           {allUsers.find(u => u.email === selectedUserEmail)?.applications?.length ?? 0} apps
                         </Badge>
                       </CardHeader>
-                      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                      <div ref={dmContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
                         {dmMessages.length === 0 ? (
                           <div className="h-full flex items-center justify-center text-center text-muted-foreground text-sm">
                             <div>
@@ -1086,7 +1101,6 @@ export default function Admin() {
                             </div>
                           </div>
                         ))}
-                        <div ref={dmEndRef} />
                       </div>
                       <div className="p-4 border-t bg-muted/20">
                         <div className="flex gap-2">
