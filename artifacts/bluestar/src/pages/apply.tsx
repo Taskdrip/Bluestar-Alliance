@@ -715,24 +715,29 @@ export default function Apply() {
       <div className="container mx-auto px-4 py-24 flex items-center justify-center min-h-[70vh]">
         <Card className="max-w-2xl w-full text-center border-border shadow-lg">
           <CardContent className="pt-12 pb-12 px-8 flex flex-col items-center">
-            <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mb-6">
-              <Clock className="w-10 h-10 text-amber-500" />
+            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
+              <CheckCircle2 className="w-10 h-10 text-green-600" />
             </div>
-            <h2 className="font-serif text-3xl font-bold text-primary mb-4">Application Confirmed!</h2>
-            <p className="text-lg text-muted-foreground mb-4 leading-relaxed max-w-xl mx-auto">
-              Your application has been successfully submitted and your add-on request has been saved.
+            <h2 className="font-serif text-3xl font-bold text-primary mb-4">Welcome to Bluestar Alliance!</h2>
+            <p className="text-lg text-muted-foreground mb-6 leading-relaxed max-w-xl mx-auto">
+              Congratulations — your application is in! You've taken a bold step toward an exciting global career, and we're honoured to be part of your journey.
             </p>
-            <div className="w-full bg-amber-50 border border-amber-200 rounded-sm p-5 mb-8 text-left space-y-2">
-              <p className="font-semibold text-amber-900 text-sm">What happens next:</p>
-              <ul className="text-sm text-amber-800 space-y-1.5 list-disc list-inside">
-                <li>Our team will review your application and reach out within <strong>2–3 business days</strong>.</li>
-                <li>We'll send bank transfer details to <strong>{submittedData?.email}</strong> when you're ready to proceed.</li>
-                <li>Your add-on services will be activated upon payment confirmation.</li>
+            <div className="w-full bg-primary/5 border border-primary/20 rounded-sm p-5 mb-8 text-left space-y-3">
+              <p className="font-semibold text-primary text-sm">What to expect next:</p>
+              <ul className="text-sm text-muted-foreground space-y-2">
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" /><span>Our HR specialists will carefully review your profile within <strong className="text-foreground">3–7 business days</strong>.</span></li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" /><span>You'll hear from us directly through your <strong className="text-foreground">My Portal</strong> — check your dashboard for messages and status updates anytime.</span></li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" /><span>While you wait, feel free to explore our <strong className="text-foreground">open roles</strong>, read <strong className="text-foreground">success stories</strong>, and learn about the industries we serve.</span></li>
               </ul>
             </div>
-            <Button onClick={() => setLocation("/")} variant="outline" className="min-w-[200px]">
-              Return to Homepage
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
+              <Button onClick={() => setLocation("/dashboard")} className="bg-primary hover:bg-primary/90 min-w-[180px]">
+                View My Portal
+              </Button>
+              <Button onClick={() => setLocation("/")} variant="outline" className="min-w-[180px]">
+                Back to Homepage
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

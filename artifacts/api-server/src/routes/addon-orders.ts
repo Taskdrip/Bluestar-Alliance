@@ -1,8 +1,23 @@
 import { Router } from "express";
-import { db, addonOrdersTable, notificationsTable } from "@workspace/db";
+import { db, addonOrdersTable, notificationsTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { verifyToken } from "../lib/auth";
 
 const router = Router();
+
+// GET /api/addon-orders/mine — returns all orders for the authenticated user's email
+router.get("/mine", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const payload = verifyToken(authHeader.slice(7));
+  if (!payload) { res.status(401).json({ error: "Invalid token" }); return; }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, payload.userId));
+  if (!user) { res.status(401).json({ error: "User not found" }); return; }
+  const orders = await db.select().from(addonOrdersTable)
+    .where(eq(addonOrdersTable.applicantEmail, user.email))
+    .orderBy(addonOrdersTable.createdAt);
+  res.json(orders.map(serializeOrder));
+});
 
 function serializeOrder(o: any) {
   return {
